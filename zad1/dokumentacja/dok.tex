@@ -55,57 +55,41 @@
 
 \noindent
 \begin{tabular}{|c|p{11cm}|c|} \hline 
-Grupa 3 & Adam Nowak & \ddmmyyyydate\today \tabularnewline
+Katarzyna Kosiak i Michał Folwarski & \ddmmyyyydate\today \tabularnewline
 \hline 
 \end{tabular}
 
 
 \section*{Zadanie 1 - Filtr Gaussa i OpenMP}
 
-Opis w kilku zdaniach jak to wspaniale działa program. Wyjaśnione tutaj jest w jaki sposób udało się uzyskać równoległe działanie programu. Przytoczony poniżej fragment kodu pokazuje najważniejszy askepkt działania naszego programu.
-
+Program rozmywa zadane zdjęcie za pomocą algorytmu Gaussa z maską o wymiarach 5x5 korzystając z zadanej liczby wątków.
+Zrównoleglono rozmywanie rzędów pikseli zadanego zdjęcia: 
 \begin{lstlisting}
-#pragma omp parallel for 
-for(int i = 0; i < 10000000; i++)
-{
-	double * d = new double[100000]; 
-	cout << "om nom nom" << endl;
-}
+#pragma omp parallel num_threads(numberOfThreads)
+    {
+    	for (int i = offset; i <= rows - offset -1; i++) {
+    	        for (int j = offset; j <= cols - offset -1; j++) {
+    	        	 /obliczanie nowych wartosci RGB dla piksela
+    	        }
+    	    }
+    }
 \end{lstlisting}
+W powyższym fragmencie użyto zmiennej offset, która wynosi 3 (dla maski o rozmiarze 5x5) i powoduje ominięcie brzegowych pikseli obrazu.
 
-
-Poniżej kodu znajduje się jego opis, który nie jest opisem w stylu "Tak, to nawet działa! Jest pętla i jest kolorowe. Szkoda, że się nie rusza". 
-
-Poniżej zamieszone są wykresy na dowód posiadania umiejętności obsługi pakietu biurowego Microsoft Office Excel lub LibreOffice Calc. Można tutaj również pochawlić się znajomością małego lecz potężnego programu gnuplot.
-
-Tu były obrazki
+Poniższy wykres pokazuje zależność czasu działania programu od liczby wątków dla przykładowego obrazu: \\
+TODO wykres podpisany z podpisanymi osiami z jednostkami
 
 
 W celu ułatwienia pracy Prowadzącemu warto wykresy podpisać, aby Prowadzący omyłkowo nie przyjął, że dany wykres przedstawia średnią miesięczną temperaturę w Bangladeszu na przełomie lat 1975-1982, ponieważ taki wykres byłby nieodpowiedni, przez co sprawozdanie byłoby niezaliczone. Łatwo zauważyć, że każdy wykres w przestrzeni 2D posiada dwie osie i z grzeczności należy je opisać. Osie posiadają jednostki, które też warto przytoczyć.
 
-Czasem w sprawozdaniu warto przytoczyć kilka zalet danego rozwiązania i wypisać je jako lista:
+Zalety tego rozwiązania to: TODO
 \begin{lista}
  \item Pierwszą zaletą jest to, że jest.
  \item Druga zaleta jest również obecna.
- \item Trzecia zaleta jest już troche naciągana.
- \item Czwarta zaleta jest wadą, czyli zaletą ujemną.
 \end{lista}
 
-Jeśli zaszłaby konieczność zestawienia danych wartości w tabeli to również jest taka możliwość.
-
-\begin{table}[!hbp]
-\centering
-\begin{tabular}{|p{5cm}|c|}
-\hline 
-Zalety & Wady \tabularnewline
-\hline 
- Ładne, kolorowe & Brak\tabularnewline
- Szybkie, działające & Brak\tabularnewline
-\hline
-\end{tabular}
-\caption{Podpis bardzo wartoścowej tabeli z danymi}
-\end{table}
-
+Wnioski
+TODO
 
 W sprawozdaniu muszą znaleźć się wnioski. Wnioski stanowią przesłankę, o tym iż osoba je pisząca, która ubiega się o tytuł magistra inżyniera, wie co robi. Osoba taka często jest w stanie określić czemu miało służyć dane ćwiczenie, a także ocenić w jakim stopniu udało się rozwiązać dane zagadnienie i gdzie napotkano problemy.
 

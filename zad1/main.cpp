@@ -32,9 +32,7 @@ int main(int argc, char **argv) {
        }
     int numberOfThreads = atoi(argv[1]);
     Mat outputImage = inputImage.clone();
-    int startrow, startcol;
-        startrow = 2;//middle pixel of filter mask
-        startcol = 2;
+    int offset = 2;//middle pixel of filter mask
     Size s = inputImage.size();
     int rows = s.height;
     int cols = s.width;
@@ -47,8 +45,9 @@ int main(int argc, char **argv) {
     auto start = std::chrono::system_clock::now();
     #pragma omp parallel num_threads(numberOfThreads)
     {
-    	for (int i = startrow; i <= rows - startrow -1; i++) {
-    	        for (int j = startcol; j <= cols - startcol -1; j++) {
+		#pragma omp for schedule(static)
+    	for (int i = offset; i <= rows - offset -1; i++) {
+    	        for (int j = offset; j <= cols - offset -1; j++) {
     	        	outputImage.at<cv::Vec3b>(i,j)[0] = getGauss(inputImage, 0, i, j, arraySum);
     	        	outputImage.at<cv::Vec3b>(i,j)[1] = getGauss(inputImage, 1, i, j, arraySum);
     	        	outputImage.at<cv::Vec3b>(i,j)[2] = getGauss(inputImage, 2, i, j, arraySum);
