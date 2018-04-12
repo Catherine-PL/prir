@@ -4,7 +4,7 @@
 #include <math.h>
 #include <vector>
 
-struct myNumber{
+struct myNumber {
     long value;
     bool prime;
 };
@@ -19,83 +19,75 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-        std::ifstream inputFile(argv[2]);
-        if (!inputFile.is_open()){
-            std::cout << "File doesn't exist: " << argv[2] << std::endl;
-            return EXIT_FAILURE;
-        }
+    std::ifstream inputFile(argv[2]);
+    if (!inputFile.is_open()) {
+        std::cout << "File doesn't exist: " << argv[2] << std::endl;
+        return EXIT_FAILURE;
+    }
 
-            std::vector <myNumber> numbers = readFile(inputFile);
+    std::vector <myNumber> numbers = readFile(inputFile);
+    inputFile.close();
 
-            inputFile.close();
+    uint i;
+    int numberOfThreds = atoi(argv[1]);
+    auto startTime = std::chrono::system_clock::now();
 
-            int numberOfThreds = atoi(argv[1]);
+    #pragma omp parallel for \
+        num_threads(numberOfThreds) \
+        default(none) shared(numbers) private(i) \
+        schedule(dynamic, 1)
+    for (i=0; i < numbers.size(); ++i) {
+        numbers[i].prime = isPrime(numbers[i].value);
+    }
 
-            auto startTime = std::chrono::system_clock::now();
+    auto endTime = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsedMiliseconds = (endTime - startTime) * 1000;
 
-            uint i;
+    std::cout << "Time: " << elapsedMiliseconds.count()<< "ms" << std::endl;
+    printResults(numbers);
 
-            #pragma omp parallel for \
-                num_threads(numberOfThreds) \
-                default(none) shared(numbers) private(i) \
-                schedule(dynamic, 1)
-            for (i=0; i < numbers.size(); ++i){
-                numbers[i].prime = isPrime(numbers[i].value);
-            }
-
-            auto endTime = std::chrono::system_clock::now();
-
-            std::chrono::duration<double> elapsedMiliseconds = (endTime - startTime) * 1000;
-
-            std::cout << "Time: " << elapsedMiliseconds.count()<< "ms" << std::endl;
-
-            printResults(numbers);
-
-            return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
 
-std::vector<myNumber> readFile(std::ifstream &inputFile){
+std::vector<myNumber> readFile(std::ifstream &inputFile) {
     long number;
     std::vector <myNumber> numbers;
 
-    while(inputFile >> number){
+    while(inputFile >> number) {
         myNumber n;
         n.value = number;
-        n.prime = false;
         numbers.push_back(n);
     }
-
-        return numbers;
+    return numbers;
 }
 
 /**
- * tests primality (naive approach  with some optimization)
+ * Tests primality (naive approach  with some optimization)
  *
  * @param number number to be tested
  * @return true if the number is pirme, otherwise false
  */
-bool isPrime(long number){
-    if (number == 2 || number == 3){
+bool isPrime(long number) {
+    if (number == 2 || number == 3) {
         return true;
-    } else if (number < 2 || number % 2 == 0 || number % 3 == 0){
+    } else if (number < 2 || number % 2 == 0 || number % 3 == 0) {
         return false;
     }
 
-        long step = 4;
-        long max = sqrt(number);
-        for (int i = 5; i <= max; i += step){
-            if (number % i == 0){
-                return false;
-            }
-                    step = 6 - step; //HACK: if (step == 2) {step = 4;} else {step = 2;}
+    int step = 4;
+    long max = sqrt(number);
+    for (int i = 5; i <= max; i += step) {
+        if (number % i == 0) {
+            return false;
         }
-
-            return true;
+        step = 6 - step; //HACK: if (step == 2) {step = 4;} else {step = 2;}
+    }
+    return true;
 }
 
-void printResults(std::vector<myNumber> numbers){
+void printResults(std::vector<myNumber> numbers) {
     for(uint i = 0; i < numbers.size(); ++i) {
-        if (numbers[i].prime){
+        if (numbers[i].prime) {
             std::cout<< numbers[i].value << ": prime" << std::endl;
         } else {
             std::cout<< numbers[i].value << ": composite" << std::endl;
