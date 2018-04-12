@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
     Size s = inputImage.size();
     int rows = s.height;
     int cols = s.width;
+    int i,j;
 
     // get gauss weights sum
     int arraySum=0;
@@ -43,11 +44,11 @@ int main(int argc, char **argv) {
         	arraySum+=GAUSS[count];
     }
     auto start = std::chrono::system_clock::now();
-    #pragma omp parallel num_threads(numberOfThreads)
+    #pragma omp parallel num_threads(numberOfThreads) shared(inputImage, outputImage, arraySum, offset, rows, cols) private(i,j)
     {
 		#pragma omp for schedule(static)
-    	for (int i = offset; i <= rows - offset -1; i++) {
-    	        for (int j = offset; j <= cols - offset -1; j++) {
+    	for (i= offset; i <= rows - offset -1; i++) {
+    	        for (j = offset; j <= cols - offset -1; j++) {
     	        	outputImage.at<cv::Vec3b>(i,j)[0] = getGauss(inputImage, 0, i, j, arraySum);
     	        	outputImage.at<cv::Vec3b>(i,j)[1] = getGauss(inputImage, 1, i, j, arraySum);
     	        	outputImage.at<cv::Vec3b>(i,j)[2] = getGauss(inputImage, 2, i, j, arraySum);
