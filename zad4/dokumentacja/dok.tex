@@ -71,7 +71,7 @@ Algorytm sprawdzania testu pierwszości został zaimplementowany na bazie metody
 
 \begin{lstlisting}
 #pragma omp parallel for num_threads(numberOfThreds) \
-    default(none) shared(numbers) private(i) schedule(dynamic, 1)
+    shared(numbers) private(i) schedule(dynamic, 1)
 for (i=0; i < numbers.size(); ++i) {
     // sprawdzenie czy dana liczba numbers[i] jest liczba pierwsza
 }
