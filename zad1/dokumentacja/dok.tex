@@ -55,7 +55,7 @@
 
 \noindent
 \begin{tabular}{|c|p{11cm}|c|} \hline 
-Katarzyna Kosiak i Michał Folwarski & \ddmmyyyydate\today \tabularnewline
+Grupa 4 & Katarzyna Kosiak i Michał Folwarski & \ddmmyyyydate\today \tabularnewline
 \hline 
 \end{tabular}
 
@@ -65,34 +65,38 @@ Katarzyna Kosiak i Michał Folwarski & \ddmmyyyydate\today \tabularnewline
 Program rozmywa zadane zdjęcie za pomocą algorytmu Gaussa z maską o wymiarach 5x5 korzystając z zadanej liczby wątków.
 Zrównoleglono rozmywanie rzędów pikseli zadanego zdjęcia: 
 \begin{lstlisting}
-#pragma omp parallel num_threads(numberOfThreads)
-    {
-    	for (int i = offset; i <= rows - offset -1; i++) {
-    	        for (int j = offset; j <= cols - offset -1; j++) {
-    	        	 /obliczanie nowych wartosci RGB dla piksela
-    	        }
-    	    }
+#pragma omp parallel for num_threads(numberOfThreads) default(shared) private(i,j)
+    for (i=0; i < rows; i++) {
+        for (j = 0; j < cols; j++) {
+            /obliczanie nowych wartosci R,G i B dla piksela
+        }
     }
 \end{lstlisting}
-W powyższym fragmencie użyto zmiennej offset, która wynosi 3 (dla maski o rozmiarze 5x5) i powoduje ominięcie brzegowych pikseli obrazu.
-
-Poniższy wykres pokazuje zależność czasu działania programu od liczby wątków dla przykładowego obrazu: \\
-\begin{figure}[h]
-\includegraphics[width=15cm]{wykres_zad1}
-\end{figure}
-
-
-W celu ułatwienia pracy Prowadzącemu warto wykresy podpisać, aby Prowadzący omyłkowo nie przyjął, że dany wykres przedstawia średnią miesięczną temperaturę w Bangladeszu na przełomie lat 1975-1982, ponieważ taki wykres byłby nieodpowiedni, przez co sprawozdanie byłoby niezaliczone. Łatwo zauważyć, że każdy wykres w przestrzeni 2D posiada dwie osie i z grzeczności należy je opisać. Osie posiadają jednostki, które też warto przytoczyć.
-
-Zalety tego rozwiązania to: TODO
+Zastosowano takie instrukcje OpenMP ponieważ:
 \begin{lista}
- \item Pierwszą zaletą jest to, że jest.
- \item Druga zaleta jest również obecna.
+ \item for: zrównoleglamy pętlę for (przebieg po wierszach),
+ \item num threads: zrównoleglanie na zadaną w argumentach wywołania programu liczbę wątków,
+ \item default(shared): dla wygody domyślnie każda zmienna jest dostępna dla każdego wątku,
+ \item private(i,j): każdy wątek dostaje kopię zmiennych przechowujących indeksy aktualnej iteracji.
 \end{lista}
 
-Wnioski
-TODO
+Domyślnie OpenMP rozdzieli pracę nad pętlą równomiernie pomiędzy wszystkie wątki. Ponieważ rozmywanie każdego piksela opiera się na tych samych działaniach (kolejne piksele nie stają się trudniejsze dto przetworzenia) to taki podział nam odpowiada.\\
 
-W sprawozdaniu muszą znaleźć się wnioski. Wnioski stanowią przesłankę, o tym iż osoba je pisząca, która ubiega się o tytuł magistra inżyniera, wie co robi. Osoba taka często jest w stanie określić czemu miało służyć dane ćwiczenie, a także ocenić w jakim stopniu udało się rozwiązać dane zagadnienie i gdzie napotkano problemy.
+Zalety tego rozwiązania to: 
+\begin{lista}
+ \item Dobrze zrównolegla obliczenia przy zachowaniu prostoty konfiguracji,
+ \item Nie wymaga dodatkowych zasobów poza dostępnymi procesorami.
+\end{lista}
 
+
+Umieszczony poniżej wykres (Rysunek 1) pokazuje zależność czasu działania programu od liczby wątków dla przykładowego obrazu o rozmiarze boku około 2500px na komputerze z dwoma procesorami. \\
+Jak widać czas skrócił się przy zrównolegleniu na tyle wątków, ile jest procesorów. Dalsze zwiększanie liczby wątków może tylko pogorszyć czas, ponieważ musi zostać poświęcony dodatkowy czas na przełączanie konktekstu dla poszczególnych wątków na współdzielonych procesorach.
+\begin{figure}[h]
+\includegraphics[width=15cm]{wykres_zad1}
+\caption{}  
+\end{figure}
+\\
+
+Wnioski \\
+Zadanie udało się wykonać - dokonano zrównoleglenia obliczeń. Wykorzystanie OpenMP w tym przypadku (niezależne od siebie obliczenia o tej samej złożoności) było skuteczne i nie wymagało wiele konfiguracji. 
 \end{document}
