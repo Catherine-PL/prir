@@ -72,7 +72,7 @@ Zrównoleglono rozmywanie rzędów pikseli zadanego zdjęcia:
         }
     }
 \end{lstlisting}
-Zastosowano takie instrukcje OpenMP ponieważ:
+Zastosowano takie instrukcje OpenMP, ponieważ:
 \begin{lista}
  \item for: zrównoleglamy pętlę for (przebieg po wierszach),
  \item num threads: zrównoleglanie na zadaną w argumentach wywołania programu liczbę wątków,
@@ -80,23 +80,23 @@ Zastosowano takie instrukcje OpenMP ponieważ:
  \item private(i,j): każdy wątek dostaje kopię zmiennych przechowujących indeksy aktualnej iteracji.
 \end{lista}
 
-Domyślnie OpenMP rozdzieli pracę nad pętlą równomiernie pomiędzy wszystkie wątki. Ponieważ rozmywanie każdego piksela opiera się na tych samych działaniach (kolejne piksele nie stają się trudniejsze dto przetworzenia) to taki podział nam odpowiada.\\
-
-Zalety tego rozwiązania to: 
-\begin{lista}
- \item Dobrze zrównolegla obliczenia przy zachowaniu prostoty konfiguracji,
- \item Nie wymaga dodatkowych zasobów poza dostępnymi procesorami.
-\end{lista}
-
+Domyślnie OpenMP rozdzieli pracę nad pętlą równomiernie pomiędzy wszystkie wątki. Ponieważ rozmywanie każdego piksela opiera się na tych samych działaniach (kolejne piksele nie stają się trudniejsze do przetworzenia) to taki podział nam odpowiada.\\
 
 Umieszczony poniżej wykres (Rysunek 1) pokazuje zależność czasu działania programu od liczby wątków dla przykładowego obrazu o rozmiarze boku około 2500px na komputerze z dwoma procesorami. \\
-Jak widać czas skrócił się przy zrównolegleniu na tyle wątków, ile jest procesorów. Dalsze zwiększanie liczby wątków może tylko pogorszyć czas, ponieważ musi zostać poświęcony dodatkowy czas na przełączanie konktekstu dla poszczególnych wątków na współdzielonych procesorach.
+Jak widać czas skrócił się przy zrównolegleniu na tyle wątków, ile jest procesorów. Dalsze zwiększanie liczby wątków może tylko pogorszyć czas, ponieważ musi zostać poświęcony dodatkowy czas na przełączanie konktekstu dla poszczególnych wątków na współdzielonych procesorach. \\
+
+Kolejny wykres (Rysunek 2) pokazuje dodatkowo, że mimo posiadania dwóch procesorów i dwóch wątków nie nastąpiło idealnie dwukrotne przespieszenie - wynika to z faktu, że przydzielanie zadań wątkom i zarządzanie nimi także wymaga zasobów.
 \begin{figure}[h]
-\includegraphics[width=15cm]{wykres_zad1}
-\caption{}  
+\includegraphics[scale=0.4]{wykres_zad1}
+\caption{Zależność czasu wykonania zadania od ilości wątków}  
+\end{figure}
+\begin{figure}[h]
+\includegraphics[scale=0.4]{wykres2_zad1}
+\caption{Zależność przyspieszenia wykonywania zadania od ilości wątków w stosunku do niezrównoleglonego zadania}  
 \end{figure}
 \\
 
-Wnioski \\
-Zadanie udało się wykonać - dokonano zrównoleglenia obliczeń. Wykorzystanie OpenMP w tym przypadku (niezależne od siebie obliczenia o tej samej złożoności) było skuteczne i nie wymagało wiele konfiguracji. 
+
+\textbf{Wnioski }\\
+Zadanie udało się wykonać - dokonano zrównoleglenia obliczeń. Wykorzystanie OpenMP w tym przypadku (niezależne od siebie obliczenia o tej samej złożoności) było skuteczne i nie wymagało wiele konfiguracji, co niewątlpiwie jest dużą zaletą. 
 \end{document}

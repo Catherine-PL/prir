@@ -87,7 +87,7 @@ Powyższy fragment kodu przedstawia w~jaki sposób zostało zorganizowane rozdzi
 
 Powyższy wykres przedstawia wyniki czasu obliczeń dla zestawu liczb znajdującym się na serwerze w~pliku \texttt{/home/shared/prir/primes/4.txt} -- odpowiednio dla jednego, dwóch, czterech i~ośmiu wątków. Zgodnie z~oczekiwaniami, czas obliczeń maleje wraz ze zwiększaniem liczby wątków do wykonywania obliczeń.
 
-Na rysunku numer \ref{chart-acceleration} został przedstawiony wykres przyspieszenia obliczeń dla tego zestawu danych. Z~wykresu można odczytać, że wzrost szybkości obliczeń na ośmiu wątkach w~stosunku do obliczeń sekwencyjnych jest około pięciokrotny -- jest to spowodowane tym, iż do zarządzania wątkami oraz~przydziału im zadań, potrzebna jest pewna ilości zasobów (w tym także obliczeniowe).
+Na rysunku numer 2 został przedstawiony wykres przyspieszenia obliczeń dla tego zestawu danych. Z~wykresu można odczytać, że wzrost szybkości obliczeń na ośmiu wątkach w~stosunku do obliczeń sekwencyjnych jest około pięciokrotny -- jest to spowodowane tym, iż do zarządzania wątkami oraz~przydziału im zadań, potrzebna jest pewna ilości zasobów (w tym także obliczeniowe).
 
 \begin{figure}[!htbp]
   \centering
@@ -97,6 +97,6 @@ Na rysunku numer \ref{chart-acceleration} został przedstawiony wykres przyspies
 \end{figure}
 
 \subsubsection*{Wnioski}
-Dzięki zastosowaniu OpenMP, możliwe jest budowanie aplikacji do obliczeń równoległych jest proste -- wystarczy dodać kilka dyrektyw, aby otrzymać zadowalające wyniki. W~tym zadaniu przetestowaliśmy możliwość dynamicznego rozdzielenia zadań pomiędzy wątki, a~co w~naszym przypadku przyniosło oczekiwane rezultaty -- obliczenia zostały zrównoleglone pomiędzy wątki i~dzięki temu zwiększyła się szybkość obliczeń.
+Dzięki zastosowaniu OpenMP, możliwe jest budowanie aplikacji do obliczeń równoległych jest proste -- wystarczy dodać kilka dyrektyw, aby otrzymać zadowalające wyniki. W~tym zadaniu przetestowaliśmy możliwość dynamicznego rozdzielenia zadań pomiędzy wątki, a~co w~naszym przypadku przyniosło oczekiwane rezultaty -- obliczenia zostały zrównoleglone pomiędzy wątki i~dzięki temu zwiększyła się szybkość obliczeń.
 
 \end{document}
