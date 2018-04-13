@@ -4,44 +4,46 @@
 #include <math.h>
 #include <vector>
 
+using namespace std;
+
 struct myNumber {
     long value;
     bool prime;
 };
 
 bool isPrime(long number);
-void printResults(std::vector<myNumber> numbers);
-std::vector<myNumber> readNumbers(std::ifstream &inputFile);
+void printResults(vector<myNumber> numbers);
+vector<myNumber> readNumbers(ifstream &inputFile);
 
 int main(int argc, char **argv) {
-    if (argc < 3 ) {
-        std::cout << "Invalid number of arguments!" << std::endl;
+    if (argc != 3 ) {
+        cout << "Invalid number of arguments!" << endl;
         return EXIT_FAILURE;
     }
 
-    std::ifstream inputFile(argv[2]);
+    ifstream inputFile(argv[2]);
     if (!inputFile.is_open()) {
-        std::cout << "File doesn't exist: " << argv[2] << std::endl;
+        cout << "File doesn't exist: " << argv[2] << endl;
         return EXIT_FAILURE;
     }
 
-    std::vector <myNumber> numbers = readNumbers(inputFile);
+    vector <myNumber> numbers = readNumbers(inputFile);
     inputFile.close();
 
     uint i;
     int numberOfThreds = atoi(argv[1]);
-    auto startTime = std::chrono::system_clock::now();
+    auto startTime = chrono::system_clock::now();
 
     #pragma omp parallel for num_threads(numberOfThreds) \
-        default(none) shared(numbers) private(i) schedule(dynamic, 1)
+        shared(numbers) private(i) schedule(dynamic, 1)
     for (i=0; i < numbers.size(); ++i) {
         numbers[i].prime = isPrime(numbers[i].value);
     }
 
-    auto endTime = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsedMiliseconds = (endTime - startTime) * 1000;
+    auto endTime = chrono::system_clock::now();
+    chrono::duration<double> elapsedMiliseconds = (endTime - startTime) * 1000;
 
-    std::cout << "Time: " << elapsedMiliseconds.count()<< "ms" << std::endl;
+    cout << "Time: " << elapsedMiliseconds.count()<< "ms" << endl;
     printResults(numbers);
 
     return EXIT_SUCCESS;
@@ -54,9 +56,9 @@ int main(int argc, char **argv) {
  * @param  inputFile file to be read from
  * @return list of numbers
  */
-std::vector<myNumber> readNumbers(std::ifstream &inputFile) {
+vector<myNumber> readNumbers(ifstream &inputFile) {
     long number;
-    std::vector <myNumber> numbers;
+    vector <myNumber> numbers;
 
     while(inputFile >> number) {
         myNumber n;
@@ -95,12 +97,12 @@ bool isPrime(long number) {
  *
  * @param numbers list of numbers
  */
-void printResults(std::vector<myNumber> numbers) {
+void printResults(vector<myNumber> numbers) {
     for(uint i = 0; i < numbers.size(); ++i) {
         if (numbers[i].prime) {
-            std::cout<< numbers[i].value << ": prime" << std::endl;
+            cout<< numbers[i].value << ": prime" << endl;
         } else {
-            std::cout<< numbers[i].value << ": composite" << std::endl;
+            cout<< numbers[i].value << ": composite" << endl;
         }
     }
 }
