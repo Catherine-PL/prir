@@ -11,7 +11,7 @@ struct myNumber {
 
 bool isPrime(long number);
 void printResults(std::vector<myNumber> numbers);
-std::vector<myNumber> readFile(std::ifstream &inputFile);
+std::vector<myNumber> readNumbers(std::ifstream &inputFile);
 
 int main(int argc, char **argv) {
     if (argc < 3 ) {
@@ -25,17 +25,15 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    std::vector <myNumber> numbers = readFile(inputFile);
+    std::vector <myNumber> numbers = readNumbers(inputFile);
     inputFile.close();
 
     uint i;
     int numberOfThreds = atoi(argv[1]);
     auto startTime = std::chrono::system_clock::now();
 
-    #pragma omp parallel for \
-        num_threads(numberOfThreds) \
-        default(none) shared(numbers) private(i) \
-        schedule(dynamic, 1)
+    #pragma omp parallel for num_threads(numberOfThreds) \
+        default(none) shared(numbers) private(i) schedule(dynamic, 1)
     for (i=0; i < numbers.size(); ++i) {
         numbers[i].prime = isPrime(numbers[i].value);
     }
@@ -49,7 +47,14 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
-std::vector<myNumber> readFile(std::ifstream &inputFile) {
+
+/**
+ * Reads numbers from the file.
+ *
+ * @param  inputFile file to be read from
+ * @return list of numbers
+ */
+std::vector<myNumber> readNumbers(std::ifstream &inputFile) {
     long number;
     std::vector <myNumber> numbers;
 
@@ -85,6 +90,11 @@ bool isPrime(long number) {
     return true;
 }
 
+/**
+ * Prints results of the primality tests.
+ *
+ * @param numbers list of numbers
+ */
 void printResults(std::vector<myNumber> numbers) {
     for(uint i = 0; i < numbers.size(); ++i) {
         if (numbers[i].prime) {
