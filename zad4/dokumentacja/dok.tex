@@ -47,80 +47,56 @@
   basicstyle=\footnotesize,
   identifierstyle=\color{magenta},
   keywordstyle=\color[rgb]{0,0,1},
-  commentstyle=\color{Darkgreen},
+  commentstyle=\color[rgb]{0,0.5,0},
   stringstyle=\color{red}
   }
 
 \begin{document}
 
 \noindent
-\begin{tabular}{|c|p{11cm}|c|} \hline 
-Grupa 3 & Adam Nowak & \ddmmyyyydate\today \tabularnewline
+\begin{tabular}{|c|p{11cm}|c|} \hline
+Grupa 4 & Katarzyna Kosiak, Michał Folwarski & \ddmmyyyydate\today \tabularnewline
 \hline 
 \end{tabular}
 
 
-\section*{Zadanie 1 - Macierze OMP}
-
-Opis w kilku zdaniach jak to wspaniale działa program. Wyjaśnione tutaj jest w jaki sposób udało się uzyskać równoległe działanie programu. Przytoczony poniżej fragment kodu pokazuje najważniejszy askepkt działania naszego programu.
-
-\begin{lstlisting}
-#pragma omp parallel for 
-for(int i = 0; i < 10000000; i++)
-{
-	double * d = new double[100000]; 
-	cout << "om nom nom" << endl;
-}
-\end{lstlisting}
-
-
-Poniżej kodu znajduje się jego opis, który nie jest opisem w stylu "Tak, to nawet działa! Jest pętla i jest kolorowe. Szkoda, że się nie rusza". 
-
-Poniżej zamieszone są wykresy na dowód posiadania umiejętności obsługi pakietu biurowego Microsoft Office Excel lub LibreOffice Calc. Można tutaj również pochawlić się znajomością małego lecz potężnego programu gnuplot.
-
-\begin{figure}[!hbp]
-	\centering
-  \includegraphics[width=0.7\textwidth]{dane/wykres.eps}
-  \caption{Profesjonalna prosta czerwona kreska z kropkami}
-\end{figure}
-
-\begin{wrapfigure}{r}{0.5\textwidth}
-  \vspace{-20pt}
-  \begin{center}
-  \includegraphics[width=0.45\textwidth]{dane/pomiar.pdf}
-  \end{center}
-  \vspace{-20pt}
-  \caption{Krzywa niebieska kreska}
-  \vspace{-10pt}
-\end{wrapfigure}
-
-
-W celu ułatwienia pracy Prowadzącemu warto wykresy podpisać, aby Prowadzący omyłkowo nie przyjął, że dany wykres przedstawia średnią miesięczną temperaturę w Bangladeszu na przełomie lat 1975-1982, ponieważ taki wykres byłby nieodpowiedni, przez co sprawozdanie byłoby niezaliczone. Łatwo zauważyć, że każdy wykres w przestrzeni 2D posiada dwie osie i z grzeczności należy je opisać. Osie posiadają jednostki, które też warto przytoczyć.
-
-Czasem w sprawozdaniu warto przytoczyć kilka zalet danego rozwiązania i wypisać je jako lista:
+\section*{Zadanie 4 - Liczby pierwsze -- OMP}
+Program ma za zadanie wykonać test pierwszości (sprawdzić czy dana liczba jest liczbą pierwszą) na zestawie liczb zapisanym w~pliku.
+Algorytm sprawdzania testu pierwszości został zaimplementowany na bazie metody naiwnej oraz optymalizacji~o:
 \begin{lista}
- \item Pierwszą zaletą jest to, że jest.
- \item Druga zaleta jest również obecna.
- \item Trzecia zaleta jest już troche naciągana.
- \item Czwarta zaleta jest wadą, czyli zaletą ujemną.
+ \item pominięcie liczb parzystych,
+ \item pominięcie liczb podzielnych przez trzy,
+ \item sprawdzenie dzielników tylko do pierwiastka kwadratowego sprawdzanej liczby.
 \end{lista}
 
-Jeśli zaszłaby konieczność zestawienia danych wartości w tabeli to również jest taka możliwość.
+\begin{lstlisting}
+#pragma omp parallel for num_threads(numberOfThreds) \
+    default(none) shared(numbers) private(i) schedule(dynamic, 1)
+for (i=0; i < numbers.size(); ++i) {
+    // sprawdzenie czy dana liczba numbers[i] jest liczba pierwsza
+}
+\end{lstlisting}
+Powyższy fragment kodu przedstawia w~jaki sposób zostało zorganizowane rozdzielanie zadań pomiędzy wątki w~OpenMP. W~tym zadaniu równomierne rozdzielenie zadań pomiędzy dostępne wątki nie sprawdzi się, ponieważ sprawdzenie czy podana liczba jest pierwszą będzie wykonywało się w~różnym czasie. Dzięki dyrektywie \verb!schedule! możemy kontrolować sposób rozdzielania iteracji. W~tym przypadku jest to rozdzielone dynamicznie na jednoelementowe podzbiory -- każdy z~wątków otrzyma jedną liczbę do sprawdzenia. Dzięki takiemu podziałowi, wątek otrzyma następne zadanie dopiero po zakończeniu poprzedniego. Zwiększanie ilości elementów w~podzbiorach powoduje, że otrzymane wyniki są nieznacznie większe lub mniejsze w~zależności od zestawu danych.
 
-\begin{table}[!hbp]
-\centering
-\begin{tabular}{|p{5cm}|c|}
-\hline 
-Zalety & Wady \tabularnewline
-\hline 
- Ładne, kolorowe & Brak\tabularnewline
- Szybkie, działające & Brak\tabularnewline
-\hline
-\end{tabular}
-\caption{Podpis bardzo wartoścowej tabeli z danymi}
-\end{table}
+\begin{figure}[!hbp]
+  \centering
+    \includegraphics[width=0.7\textwidth]{chart}
+  \caption{Wykres zależności czasu wykonania od ilości wątków}
+  \label{chart-time-threads}
+\end{figure}
 
+Powyższy wykres przedstawia wyniki czasu obliczeń dla zestawu liczb znajdującym się na serwerze w~pliku \texttt{/home/shared/prir/primes/4.txt} -- odpowiednio dla jednego, dwóch, czterech i~ośmiu wątków. Zgodnie z~oczekiwaniami, czas obliczeń maleje wraz ze zwiększaniem liczby wątków do wykonywania obliczeń.
 
-W sprawozdaniu muszą znaleźć się wnioski. Wnioski stanowią przesłankę, o tym iż osoba je pisząca, która ubiega się o tytuł magistra inżyniera, wie co robi. Osoba taka często jest w stanie określić czemu miało służyć dane ćwiczenie, a także ocenić w jakim stopniu udało się rozwiązać dane zagadnienie i gdzie napotkano problemy.
+Na rysunku numer \ref{chart-acceleration} został przedstawiony wykres przyspieszenia obliczeń dla tego zestawu danych. Z~wykresu można odczytać, że wzrost szybkości obliczeń na ośmiu wątkach w~stosunku do obliczeń sekwencyjnych jest około pięciokrotny -- jest to spowodowane tym, iż do zarządzania wątkami oraz~przydziału im zadań, potrzebna jest pewna ilości zasobów (w tym także obliczeniowe).
+
+\begin{figure}[!htbp]
+  \centering
+    \includegraphics[width=0.7\textwidth]{chart2}
+    \caption{Krzywa przyspieszenia obliczeń w~zależności od ilości wątków.}
+  \label{chart-acceleration}
+\end{figure}
+
+\subsubsection*{Wnioski}
+Dzięki zastosowaniu OpenMP, możliwe jest budowanie aplikacji do obliczeń równoległych jest proste -- wystarczy dodać kilka dyrektyw, aby otrzymać zadowalające wyniki. W~tym zadaniu przetestowaliśmy możliwość dynamicznego rozdzielenia zadań pomiędzy wątki, a~co w~naszym przypadku przyniosło oczekiwane rezultaty -- obliczenia zostały zrównoleglone pomiędzy wątki i~dzięki temu zwiększyła się szybkość obliczeń.
 
 \end{document}
