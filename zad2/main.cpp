@@ -95,13 +95,15 @@ int main(int argc, char **argv) {
     		 blockSize[2] = block.channels();
     		 COMM_WORLD.Send(blockSize, 3, MPI_INT, i, 0);
     		 COMM_WORLD.Send(block.data,block.rows * block.cols * block.channels(), MPI_BYTE, i, 1);
-    		 
-    		 // receive parts of images
-    		 Mat outputBlock = block.clone();
-    		 COMM_WORLD.Recv(outputBlock.data, outputBlock.cols * outputBlock.rows * outputBlock.channels(), MPI_BYTE, i, 3);
-    		 outputImage.push_back(outputBlock);
-    		 imwrite(argv[2], outputImage);
     	 }
+    	 for (int i = 1; i < numberOfThreads; i++) {
+    		 // receive parts of images
+    		 COMM_WORLD.Recv(blockSize, 3, MPI_INT, i, 3);
+    		 Mat outputBlock = Mat::zeros(cv::Size(blockSize[1], blockSize[0]), CV_8UC3);
+    		 COMM_WORLD.Recv(outputBlock.data, outputBlock.cols * outputBlock.rows * outputBlock.channels(), MPI_BYTE, i, 4);
+    		 outputImage.push_back(outputBlock);
+    	 }
+    	 imwrite(argv[2], outputImage);
     } else {
     	int *blockSize = new int[3];
     	COMM_WORLD.Recv(blockSize, 3, MPI_INT, 0, 0);
@@ -118,9 +120,9 @@ int main(int argc, char **argv) {
     	    	outputBlock.at<cv::Vec3b>(i,j)[2] = getGauss(block, 2, i, j, arraySum);
     	    }
     	}
-    	
     	// send
-		COMM_WORLD.Send(outputBlock.data, outputBlock.cols * outputBlock.rows * outputBlock.channels(), MPI_BYTE, 0, 3);
+    	COMM_WORLD.Send(blockSize, 3, MPI_INT, 0, 3);
+		COMM_WORLD.Send(outputBlock.data, outputBlock.cols * outputBlock.rows * outputBlock.channels(), MPI_BYTE, 0, 4);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
