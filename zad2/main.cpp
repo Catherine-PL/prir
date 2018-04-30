@@ -46,11 +46,13 @@ int main(int argc, char **argv) {
     for(int count = 0; count < 25; count++) {
         arraySum += GAUSS[count];
     }
+    Mat inputImage;
     //if only 1 thread then just do it in here
     MPI_Barrier(MPI_COMM_WORLD);
-    auto start = MPI_Wtime();
+    double start;
     if (numberOfThreads == 1) {
-    	Mat inputImage = imread(argv[1], IMREAD_COLOR);
+    	inputImage = imread(argv[1], IMREAD_COLOR);
+    	start = MPI_Wtime();
     	Mat outputImage = inputImage.clone();
     	int rows = inputImage.rows;
     	int cols = inputImage.cols;
@@ -64,6 +66,7 @@ int main(int argc, char **argv) {
     	imwrite(argv[2], outputImage);
     } else if (rank == 0) {
     	 Mat inputImage = imread(argv[1], IMREAD_COLOR);
+    	 start = MPI_Wtime();
     	 int rows = inputImage.rows;
     	 int cols = inputImage.cols;
     	 
