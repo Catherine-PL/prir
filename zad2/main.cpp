@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 
 using namespace cv;
+using namespace MPI;
 
 int GAUSS[25] = {1, 1, 2, 1, 1,
                  1, 2, 4, 2, 1,
@@ -34,38 +35,96 @@ int main(int argc, char **argv) {
         std::cout << "Invalid number of arguments!" << std::endl;
         return EXIT_FAILURE;
     }
-    Mat inputImage = imread(argv[1], IMREAD_COLOR);
-    if (inputImage.empty() ) {
-        std::cout << "File doesn't exist: " << argv[1] << std::endl;
-        return EXIT_FAILURE;
-    }
-    //TODO get it from MPI if necessary
-    int numberOfThreads = 1;//atoi(argv[1]);
-    Mat outputImage = inputImage.clone();
-    int rows = inputImage.rows;
-    int cols = inputImage.cols;
-    int i,j;
+  
+
+    int numberOfThreads, rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &numberOfThreads);
 
     // get gauss weights sum
     int arraySum = 0;
     for(int count = 0; count < 25; count++) {
         arraySum += GAUSS[count];
     }
-    auto start = std::chrono::system_clock::now();
-    //#pragma omp parallel for num_threads(numberOfThreads) default(shared) private(i,j)
-    for (i=0; i < rows; i++) {
-        for (j = 0; j < cols; j++) {
-            outputImage.at<cv::Vec3b>(i,j)[0] = getGauss(inputImage, 0, i, j, arraySum);
-            outputImage.at<cv::Vec3b>(i,j)[1] = getGauss(inputImage, 1, i, j, arraySum);
-            outputImage.at<cv::Vec3b>(i,j)[2] = getGauss(inputImage, 2, i, j, arraySum);
-        }
-    }
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsedMiliseconds = (end - start) * 1000;
-    std::cout << "Time: " << elapsedMiliseconds.count()<< "ms" << std::endl;
+    //if only 1 thread then just do it in here
+    MPI_Barrier(MPI_COMM_WORLD);
+    auto start = MPI_Wtime();
+    if (numberOfThreads == 1) {
+    	Mat inputImage = imread(argv[1], IMREAD_COLOR);
+    	Mat outputImage = inputImage.clone();
+    	int rows = inputImage.rows;
+    	int cols = inputImage.cols;
+    	for (int i=0; i < rows; i++) {
+    	    for (int j = 0; j < cols; j++) {
+    	    	outputImage.at<cv::Vec3b>(i,j)[0] = getGauss(inputImage, 0, i, j, arraySum);
+    	    	outputImage.at<cv::Vec3b>(i,j)[1] = getGauss(inputImage, 1, i, j, arraySum);
+    	    	outputImage.at<cv::Vec3b>(i,j)[2] = getGauss(inputImage, 2, i, j, arraySum);
+    	    	}
+    	}
+    	imwrite(argv[2], outputImage);
+    } else if (rank == 0) {
+    	 Mat inputImage = imread(argv[1], IMREAD_COLOR);
+    	 int rows = inputImage.rows;
+    	 int cols = inputImage.cols;
+    	 
+    	    if (inputImage.empty() ) {
+    	        std::cout << "File doesn't exist: " << argv[1] << std::endl;
+    	        return EXIT_FAILURE;
+    	    }
+    	 Mat outputImage;
+    	//cut image and send
+    	 int top, bottom, blockRows;
+    	 int *blockSize = new int[3];
+    	 blockRows = rows/(numberOfThreads - 1);
+    	 for (int i = 1; i < numberOfThreads; i++) {
+    		 top = (i-1) * blockRows;
+    		 if (i == (numberOfThreads - 1)) {
+    			 bottom = inputImage.rows;
+    		 }else {
+    			 bottom = i * blockRows;
+    		 }
+    		 Mat block = Mat::zeros(cv::Size(cols, bottom-top), CV_8UC3);
+    		 Rect r(0, top, cols, bottom-top);
+    		 inputImage(r).copyTo(block);
 
-    imwrite(argv[2], outputImage);
-    
+    		 blockSize[0] = block.rows;
+    		 blockSize[1] = block.cols;
+    		 blockSize[2] = block.channels();
+    		 COMM_WORLD.Send(blockSize, 3, MPI_INT, i, 0);
+    		 COMM_WORLD.Send(block.data,block.rows * block.cols * block.channels(), MPI_BYTE, i, 1);
+    		 
+    		 // receive parts of images
+    		 Mat outputBlock = block.clone();
+    		 COMM_WORLD.Recv(outputBlock.data, outputBlock.cols * outputBlock.rows * outputBlock.channels(), MPI_BYTE, i, 3);
+    		 outputImage.push_back(outputBlock);
+    		 imwrite(argv[2], outputImage);
+    	 }
+    } else {
+    	int *blockSize = new int[3];
+    	COMM_WORLD.Recv(blockSize, 3, MPI_INT, 0, 0);
+    	Mat block = Mat(blockSize[0], blockSize[1], CV_8UC3);
+    	COMM_WORLD.Recv(block.data, blockSize[0] * blockSize[1] * 3, MPI_BYTE, 0,1);
+    	
+    	// blur
+    	Mat outputBlock = block.clone();
+    	
+    	for (int i=0; i < blockSize[0]; i++) {
+    	    for (int j = 0; j < blockSize[1]; j++) {
+    	    	outputBlock.at<cv::Vec3b>(i,j)[0] = getGauss(block, 0, i, j, arraySum);
+    	    	outputBlock.at<cv::Vec3b>(i,j)[1] = getGauss(block, 1, i, j, arraySum);
+    	    	outputBlock.at<cv::Vec3b>(i,j)[2] = getGauss(block, 2, i, j, arraySum);
+    	    }
+    	}
+    	
+    	// send
+		COMM_WORLD.Send(outputBlock.data, outputBlock.cols * outputBlock.rows * outputBlock.channels(), MPI_BYTE, 0, 3);
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    auto end = MPI_Wtime();
+    if (rank == 0) {
+    	std::cout << "Time: " << (end - start) * 1000 << "ms" << std::endl;
+    }
     MPI_Finalize();
     
     return EXIT_SUCCESS;
