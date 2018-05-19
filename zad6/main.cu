@@ -1,7 +1,6 @@
 #include <chrono>
 #include <fstream>
 #include <iostream>
-#include <math.h>
 #include <vector>
 
 using namespace std;
@@ -11,33 +10,43 @@ struct myNumber {
     bool prime;
 };
 
-bool isPrime(long number);
+__global__ void kernel(myNumber *numbers, int size);
+__device__ bool isPrime(long number);
 void printResults(vector<myNumber> numbers);
 vector<myNumber> readNumbers(ifstream &inputFile);
 
 int main(int argc, char **argv) {
-    if (argc != 3 ) {
+    if (argc != 2 ) {
         cout << "Invalid number of arguments!" << endl;
         return EXIT_FAILURE;
     }
 
-    ifstream inputFile(argv[2]);
+    ifstream inputFile(argv[1]);
     if (!inputFile.is_open()) {
-        cout << "File doesn't exist: " << argv[2] << endl;
+        cout << "File doesn't exist: " << argv[1] << endl;
         return EXIT_FAILURE;
     }
 
     vector <myNumber> numbers = readNumbers(inputFile);
     inputFile.close();
 
-    uint i;
-    int numberOfThreds = atoi(argv[1]);
     auto startTime = chrono::system_clock::now();
 
-    //TODO: GPU computing
-    for (i=0; i < numbers.size(); ++i) {
-        numbers[i].prime = isPrime(numbers[i].value);
-    }
+    myNumber *dev_numbers;
+    // allocating memory on GPU
+    cudaMalloc( (void**) &dev_numbers, numbers.size() * sizeof(struct myNumber) );
+
+    // copying data to GPU
+    cudaMemcpy( dev_numbers, numbers.data(),  numbers.size() * sizeof(struct myNumber), cudaMemcpyHostToDevice );
+
+    // doing calculation on GPU
+    kernel<<< numbers.size(), 1>>>(dev_numbers, numbers.size());
+
+    //copying results from GPU
+    cudaMemcpy(numbers.data(), dev_numbers, numbers.size() * sizeof(struct myNumber), cudaMemcpyDeviceToHost );
+
+    // freeing memory from GPU
+    cudaFree(dev_numbers);
 
     auto endTime = chrono::system_clock::now();
     chrono::duration<double> elapsedMiliseconds = (endTime - startTime) * 1000;
@@ -48,6 +57,12 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
+__global__ void kernel(myNumber *numbers, int size) {
+    int tid = blockIdx.x;
+    if (tid < size ){
+        numbers[tid].prime = isPrime(numbers[tid].value);
+    }
+}
 
 /**
  * Reads numbers from the file.
@@ -73,7 +88,7 @@ vector<myNumber> readNumbers(ifstream &inputFile) {
  * @param number number to be tested
  * @return true if the number is pirme, otherwise false
  */
-bool isPrime(long number) {
+__device__ bool isPrime(long number) {
     if (number == 2 || number == 3) {
         return true;
     } else if (number < 2 || number % 2 == 0 || number % 3 == 0) {
@@ -81,8 +96,7 @@ bool isPrime(long number) {
     }
 
     int step = 4;
-    long max = sqrt(number);
-    for (int i = 5; i <= max; i += step) {
+    for (int i = 5; i*i <= number; i += step) { //NOTICE: sqrt() is not allowed
         if (number % i == 0) {
             return false;
         }
