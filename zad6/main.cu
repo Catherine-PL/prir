@@ -1,4 +1,3 @@
-#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -30,7 +29,10 @@ int main(int argc, char **argv) {
     vector <myNumber> numbers = readNumbers(inputFile);
     inputFile.close();
 
-    auto startTime = chrono::system_clock::now();
+    cudaEvent_t start, stop;
+    float elapsedTime;
+    cudaEventCreate( &start );
+    cudaEventCreate( &stop );
 
     myNumber *dev_numbers;
     // allocating memory on GPU
@@ -39,8 +41,13 @@ int main(int argc, char **argv) {
     // copying data to GPU
     cudaMemcpy( dev_numbers, numbers.data(),  numbers.size() * sizeof(struct myNumber), cudaMemcpyHostToDevice );
 
+    cudaEventRecord( start, 0 );
     // doing calculation on GPU
     kernel<<< numbers.size(), 1>>>(dev_numbers, numbers.size());
+    cudaEventRecord( stop, 0 );
+
+    cudaEventSynchronize( stop );
+    cudaEventElapsedTime( &elapsedTime, start, stop );
 
     //copying results from GPU
     cudaMemcpy(numbers.data(), dev_numbers, numbers.size() * sizeof(struct myNumber), cudaMemcpyDeviceToHost );
@@ -48,10 +55,7 @@ int main(int argc, char **argv) {
     // freeing memory from GPU
     cudaFree(dev_numbers);
 
-    auto endTime = chrono::system_clock::now();
-    chrono::duration<double> elapsedMiliseconds = (endTime - startTime) * 1000;
-
-    cout << "Time: " << elapsedMiliseconds.count()<< "ms" << endl;
+    cout << "Time: " << elapsedTime << "ms" << endl;
     printResults(numbers);
 
     return EXIT_SUCCESS;
@@ -59,7 +63,7 @@ int main(int argc, char **argv) {
 
 __global__ void kernel(myNumber *numbers, int size) {
     int tid = blockIdx.x;
-    if (tid < size ){
+    if (tid < size) {
         numbers[tid].prime = isPrime(numbers[tid].value);
     }
 }
