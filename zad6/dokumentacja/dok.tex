@@ -59,7 +59,7 @@ Grupa~4 & Katarzyna Kosiak i~Michał Folwarski & \ddmmyyyydate\today \tabularnew
 \hline
 \end{tabular}
 
-\section*{Zadanie~6 -- Liczby pierwsze w CUDA}
+\section*{Zadanie~6 -- Liczby pierwsze w~CUDA}
 Program ma za zadanie wykonać test pierwszości (sprawdzić czy dana liczba jest liczbą pierwszą) na zestawie liczb zapisanym w~pliku.
 Algorytm sprawdzania testu pierwszości został zaimplementowany na bazie metody naiwnej oraz optymalizacji~o:
 \begin{lista}
@@ -69,42 +69,56 @@ Algorytm sprawdzania testu pierwszości został zaimplementowany na bazie metody
 \end{lista}
 
 \begin{lstlisting}
-if (rank == 0) { //proces glowny
-    if (numberOfThreads == 1) {
-        //wykonaj test pierwszosci dla wszystkich liczb
-    } else {
-        //rozdziel zadania
-    }
-} else { //pozostale procesy
-    //wykonaj test pierwszosci dla otrzymanej liczby
-}
+// alokacja pamieci na karcie graficznej
+cudaMalloc((void**) &dev_numbers, numbers.size()*sizeof(struct myNumber));
+
+// kopiowanie danych na karte graficzna
+cudaMemcpy( dev_numbers, numbers.data(),
+            numbers.size() * sizeof(struct myNumber),
+            cudaMemcpyHostToDevice );
+
+// wykonywanie obliczen na karcie graficznej
+kernel<<< numbers.size(), 1 >>>( dev_numbers, numbers.size() );
+
+// kopiowanie wynikow z karty gfraficznej
+cudaMemcpy( numbers.data(), dev_numbers,
+            numbers.size() * sizeof(struct myNumber),
+            cudaMemcpyDeviceToHost );
 \end{lstlisting}
-Powyższy fragment kodu przedstawia główną ideę  w~jaki sposób zostało zorganizowane rozdzielanie zadań pomiędzy procesy w~standardzie Message Passing Interface (MPI). W~tym zadaniu równomierne rozdzielenie zadań pomiędzy dostępne procesy nie sprawdzi się, ponieważ weryfikowanie czy podana liczba jest pierwszą będzie wykonywało się w~różnym czasie. W~naszym przypadku jest to rozdzielone dynamicznie na jednoelementowe podzbiory -- każdy z~procesów (oprócz głównego) będzie otrzymywał po jednej liczbie do sprawdzenia. Dzięki takiemu podziałowi, dany proces otrzyma następne zadanie dopiero po zakończeniu poprzedniego. Zwiększanie ilości elementów w~podzbiorach powoduje, że otrzymane czasy obliczeń są nieznacznie większe lub mniejsze w~zależności od zestawu danych.
+
+Powyższy fragment kodu przedstawia główną ideę w~jaki sposób zostało zorganizowane wykonywanie obliczeń na karcie graficznej w~technologii CUDA. W~kernelu jest wykonywany test pierwszości dla każdej liczy, a~ponieważ obliczenia dla każdej liczby można wykonać niezależnie od pozostałych, to najlepszy czas obliczeń uzyskamy gdy będziemy wykonywać test pierwszości dla wszystkich liczb jednocześnie. W~naszym przypadku osiągnęliśmy to poprzez dynamiczne ustawienie ilości bloków dla kernela równej ilości liczb w~danym zestawie liczb do sprawdzenia oraz jeden wątkiem na każdy blok. Wszelkie inne kombinacje z~ilością i~rozmiarami bloków, gdy sumaryczna ilość wątków jest równa wielkości zestawu danych dają takie same rezultaty.
 
 \begin{figure}[!hbp]
-  \centering
-    \includegraphics[width=0.7\textwidth]{chart}
-  \caption{Wykres zależności czasu wykonania od ilości procesów}
-  \label{chart-time-threads}
+\begin{center}
+\subfigure[zestaw składający się z~40 liczb]{
+    \includegraphics[width=0.45\textwidth]{chart-40}
+    \label{chart40}
+    }
+\subfigure[zestaw składający się z~80 liczb]{
+    \includegraphics[width=0.45\textwidth]{chart-80}
+    \label{chart80}
+    }
+  \caption{Wykresy zależności czasu wykonania obliczeń od liczby bloków}
+\end{center}
 \end{figure}
+Wykresy na rysunku numer~1 przedstawiają wyniki czasu obliczeń dla dwóch różnych zestawów liczb. Z~wykresów można odczytać, że najlepszy czas osiągamy dla liczby bloków równej wielkości zestawu danych, a~dalsze zwiększanie liczby bloków (ponad rozmiar zestawu danych) nie przynosi wzrostu przyspieszenie -- wyniki nieznacznie się różnią od tego najlepszego.
 
-Wykres na rysunku numer~1 przedstawia wyniki czasu obliczeń dla zestawu liczb znajdującym się na serwerze CUDA w~pliku \texttt{/home/shared/prir/primes/4.txt}.
-
-Jak widać na wykresie czas wykonania dla dwóch procesów jest większy niż dla jednego, ponieważ w~naszym rozwiązaniu pierwszy proces rozdziela zadania, a~pozostałe wykonują obliczenia -- czyli dla dwóch procesów tylko jeden z~nich wykonuje właściwe obliczenia. Dodatkowy czas w~stosunku do obliczeń na jednym procesie wynika z~tego, iż do zarządzania komunikacją pomiędzy procesami oraz przydziału im zadań, potrzebna jest pewna ilości zasobów (w~tym także obliczeniowych) oraz tym, że proces który wykona sprawdzenie danej liczby pod kątem pierwszości oczekuje pewien czas otrzymanie na kolejnej liczby do sprawdzenia.
-
-Pomimo, że na serwerze jest osiem rzeczywistych rdzeni to z~wykresu można też odczytać, że najlepszy czas obliczeń jest dla dziewięciu procesów (jeden proces rozdziela zadania, a~pozostałe osiem wykonują test pierwszości). Dzieję się to dlatego, że w~ciągu komunikacji są przerwy -- procesy obierają, przetwarzają i~wysyłają dane, a~następnie czekają na odebranie kolejnego zestawu danych. Planista systemowy zręcznie wykorzystuje to ``czekanie'' poprzez wykonanie tych zadań współbieżnie w~przeplocie.
-
-Dalsze zwiększanie liczby procesów (ponad dziewięć) nie przynosi wzrostu przyspieszenie, a~wyniki nieznacznie się różnią od tego najlepszego.
-
-\begin{figure}[!htbp]
-  \centering
-    \includegraphics[width=0.7\textwidth]{chart2}
-    \caption{Krzywa przyspieszenia obliczeń w~zależności od ilości procesów.}
-  \label{chart-acceleration}
+\begin{figure}[!hbp]
+\begin{center}
+\subfigure[zestaw składający się z~40 liczb]{
+    \includegraphics[width=0.45\textwidth]{chart-40-acc}
+    \label{chart40-acc}
+    }
+\subfigure[zestaw składający się z~80 liczb]{
+    \includegraphics[width=0.45\textwidth]{chart-80-acc}
+    \label{chart80-acc}
+    }
+  \caption{Wykresy przyspieszenia wykonania obliczeń w~zależności od liczby bloków}
+\end{center}
 \end{figure}
-Na rysunku numer~2 został przedstawiony wykres przyspieszenia obliczeń dla tego samego zestawu danych. Z~wykresu można odczytać, że największy przyrost szybkości obliczeń w~stosunku do obliczeń na jednym procesie jest około czterokrotny -- wyniki przyspieszenie w~dużej mierze zależą od zestawu danych i~od zaproponowanego sposobu podziału zadań pomiędzy procesami zaimplementowanego przez programistę.
+Z powyższych wykresów można odczytać, że maksymalne przyspieszenie dla tych danych wyniosło odpowiednio~38,5 dla zestawu składającego się z~czterdziestu liczb oraz~76,5 dla drugiego zestawu składającego się z~osiemdziesięciu liczb. Czyli w~tych przypadkach uzyskaliśmy przyspieszenie to którego oczekiwaliśmy -- wszystkie liczby były jednocześnie liczone, czyli przyspieszenie wyniosło w~przybliżeniu tyle co ilość liczb w~pliku wejściowym. Uzyskane wyniki przyspieszenia w~dużej mierze zależą od zestawu danych.
 
 \subsubsection*{Wnioski}
-\noindent Dzięki zastosowaniu MPI, możliwe jest budowanie aplikacji do obliczeń równoległych za pomocą przesyłania komunikatów pomiędzy procesami. Sposób podziału zadań, wysyłania i~odbierania komunikatów należy wyłącznie do programisty -- niewątpliwie jest to trudniejsze niż w~przypadku korzystania z~OpenMP. W~tym zadaniu przetestowaliśmy możliwość dynamicznego rozdzielenia zadań pomiędzy wątki, a~co w~naszym przypadku przyniosło oczekiwane rezultaty -- obliczenia zostały zrównoleglone pomiędzy wątki i~dzięki temu zwiększyła się szybkość obliczeń.
+\noindent Dzięki wykonywaniu obliczeń na karcie graficznej, możliwe jest znaczne przyspieszenie obliczeń, ponieważ możliwość jednoczesnego uruchomienia obliczeń na karcie graficznej jest znacznie większa niż na procesorze. W~tym zadaniu przetestowaliśmy możliwość dynamicznego rozdzielenia zadań, a~co w~naszym przypadku przyniosło oczekiwane rezultaty -- obliczenia zostały zrównoleglone na karcie graficznej i~dzięki temu zwiększyła się szybkość obliczeń. Dostrzegliśmy też, że ``wąskim gardłem'' w~tej technologii jest przesyłanie danych pomiędzy procesorem a~kartą graficzną -- czas przesyłania danych oscylował w~okolicy 400ms podczas gdy obliczenia na karcie graficznej w~optymalnej konfiguracji wyniosły zaledwie kilka milisekund.
 
 \end{document}
