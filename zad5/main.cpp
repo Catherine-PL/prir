@@ -1,6 +1,6 @@
+#include <cmath>
 #include <fstream>
 #include <iostream>
-#include <math.h>
 #include <mpi.h>
 #include <vector>
 
@@ -15,7 +15,7 @@ struct myNumber {
 };
 
 bool isPrime(long number);
-void manageProcesses(uint numberOfThreads, vector<myNumber> &numbers);
+void manageProcesses(uint numberOfProcesses, vector<myNumber> &numbers);
 void printResults(vector<myNumber> numbers);
 void processData();
 vector<myNumber> readNumbers(ifstream &inputFile);
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    uint numberOfThreads = COMM_WORLD.Get_size();
+    uint numberOfProcesses = COMM_WORLD.Get_size();
     int rank = COMM_WORLD.Get_rank();
 
     vector <myNumber> numbers;
@@ -49,12 +49,12 @@ int main(int argc, char **argv) {
         inputFile.close();
         startTime = Wtime();
 
-        if (numberOfThreads == 1) {
+        if (numberOfProcesses == 1) {
             for (uint i=0; i < numbers.size(); ++i) {
                 numbers[i].prime = isPrime(numbers[i].value);
             }
         } else {
-            manageProcesses(numberOfThreads, numbers);
+            manageProcesses(numberOfProcesses, numbers);
         }
     } else { //rank != 0
         processData();
@@ -148,15 +148,15 @@ void update(vector<myNumber> &numbers, myNumber newNumber) {
 /**
  * Manages processes - sends and receives data.
  *
- * @param numberOfThreads number of threads
+ * @param numberOfProcesses number of processes
  * @param numbers list of numbers
  */
-void manageProcesses(uint numberOfThreads, vector<myNumber> &numbers) {
+void manageProcesses(uint numberOfProcesses, vector<myNumber> &numbers) {
     myNumber numberToTest, receivedNumber;
     Status status;
     uint counter = 0;
 
-    for (uint i = 1; i < numberOfThreads; ++i) {
+    for (uint i = 1; i < numberOfProcesses; ++i) {
         if ( (i-1) < numbers.size()) {
             numberToTest = numbers[counter++];
         } else {
@@ -167,13 +167,13 @@ void manageProcesses(uint numberOfThreads, vector<myNumber> &numbers) {
 
     for (uint i = 0; i < numbers.size(); ++i) {
         COMM_WORLD.Recv(&receivedNumber, sizeof(struct myNumber), CHAR, ANY_SOURCE, 0, status);
-        update(numbers, receivedNumber);
         if (counter < numbers.size()) {
             numberToTest = numbers[counter++];
         } else {
             numberToTest.value = STOP_SIGNAL;
         }
         COMM_WORLD.Send(&numberToTest, sizeof(struct myNumber), CHAR, status.Get_source(), 0);
+        update(numbers, receivedNumber);
     }
 }
 

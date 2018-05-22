@@ -70,7 +70,7 @@ Algorytm sprawdzania testu pierwszości został zaimplementowany na bazie metody
 
 \begin{lstlisting}
 if (rank == 0) { //proces glowny
-    if (numberOfThreads == 1) {
+    if (numberOfProcesses == 1) {
         //wykonaj test pierwszosci dla wszystkich liczb
     } else {
         //rozdziel zadania
@@ -83,22 +83,20 @@ Powyższy fragment kodu przedstawia główną ideę  w~jaki sposób zostało zor
 
 \begin{figure}[!hbp]
   \centering
-    \includegraphics[width=0.7\textwidth]{chart}
+    \includegraphics[width=0.6\textwidth]{chart}
   \caption{Wykres zależności czasu wykonania od ilości procesów}
   \label{chart-time-threads}
 \end{figure}
 
-Wykres na rysunku numer~1 przedstawia wyniki czasu obliczeń dla zestawu liczb znajdującym się na serwerze CUDA w~pliku \texttt{/home/shared/prir/primes/4.txt}.
+Wykres na rysunku numer~1 przedstawia uśrednione wyniki czasu obliczeń dla zestawu pięciuset liczb pierwszych z~kilku prób na czterordzeniowym procesorze Intel\textregistered\ Core\texttrademark\ i7-920 z~technologią Hypher-Threading.
 
 Jak widać na wykresie czas wykonania dla dwóch procesów jest większy niż dla jednego, ponieważ w~naszym rozwiązaniu pierwszy proces rozdziela zadania, a~pozostałe wykonują obliczenia -- czyli dla dwóch procesów tylko jeden z~nich wykonuje właściwe obliczenia. Dodatkowy czas w~stosunku do obliczeń na jednym procesie wynika z~tego, iż do zarządzania komunikacją pomiędzy procesami oraz przydziału im zadań, potrzebna jest pewna ilości zasobów (w~tym także obliczeniowych) oraz tym, że proces który wykona sprawdzenie danej liczby pod kątem pierwszości oczekuje pewien czas otrzymanie na kolejnej liczby do sprawdzenia.
 
-Pomimo, że na serwerze jest osiem rzeczywistych rdzeni to z~wykresu można też odczytać, że najlepszy czas obliczeń jest dla dziewięciu procesów (jeden proces rozdziela zadania, a~pozostałe osiem wykonują test pierwszości). Dzieję się to dlatego, że w~ciągu komunikacji są przerwy -- procesy obierają, przetwarzają i~wysyłają dane, a~następnie czekają na odebranie kolejnego zestawu danych. Planista systemowy zręcznie wykorzystuje to ``czekanie'' poprzez wykonanie tych zadań współbieżnie w~przeplocie.
-
-Dalsze zwiększanie liczby procesów (ponad dziewięć) nie przynosi wzrostu przyspieszenie, a~wyniki nieznacznie się różnią od tego najlepszego.
+Z~wykresu można też odczytać, że najlepszy czas obliczeń jest dla dziewięciu procesów (jeden proces rozdziela zadania, a~pozostałe osiem wykonują test pierwszości). Takie wyniku otrzymujemy dzięki temu, że procesor działa ma technologię Hypher-Threading oraz dlatego, że w~ciągu komunikacji są przerwy -- procesy obierają, przetwarzają i~wysyłają dane, a~następnie czekają na odebranie kolejnego zestawu danych. Planista systemowy zręcznie wykorzystuje to ``czekanie'' poprzez wykonanie tych zadań współbieżnie w~przeplocie. Dalsze zwiększanie liczby procesów (ponad dziewięć) nie przynosi wzrostu przyspieszenie, a~wyniki nieznacznie się różnią od tego najlepszego.
 
 \begin{figure}[!htbp]
   \centering
-    \includegraphics[width=0.7\textwidth]{chart2}
+    \includegraphics[width=0.6\textwidth]{chart2}
     \caption{Krzywa przyspieszenia obliczeń w~zależności od ilości procesów.}
   \label{chart-acceleration}
 \end{figure}
