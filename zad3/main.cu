@@ -25,9 +25,51 @@ int GAUSS[25] = {1, 1, 2, 1, 1,
 __constant__ int gaussMask[25];
 __constant__ int gaussSum;
 
+
+//TODO this will run on each thread in each block
+__device__ int getGauss(unsigned char* image, int channel, int i, int j , int rows, int cols, int step, int offset) {
+    int value = 0;
+    int outOfBounds = 0;
+    for (int x = -2; x <= 2; x++) {
+        for (int y = -2; y <=2; y++) {
+            if (i + x < 0 || i + x >= rows || j + y < 0 || j + y > cols ) {
+                outOfBounds += gaussMask[5 * (2 + x) + 2 + y];
+            } else {
+
+        /*    	int b = inputImage[step * y + x ];
+            		 int g = inputImage[step * y + x + 1];
+            		 int r = inputImage[step * y + x + 2];*/
+            	//[step*j + i + channel]
+                value += image[offset + channel ]*gaussMask[5 * (2 + x) + 2 + y];
+            }
+        }
+    }
+    return value / (gaussSum - outOfBounds);
+
+    /*for(int xChange = 0 ; xChange < MASK_SIZE ; xChange++) {
+    				for(int yChange = 0 ; yChange< MASK_SIZE ; yChange++) {
+    					currentPixelVal+=
+    					d_mask[xChange][yChange] * inputImage[thIdx + ((yChange - 2) * size) + ((xChange - 2) * channelNo)];
+    				}
+    			}
+    			outputImage[thIdx] = (unsigned char) (currentPixelVal/d_weight);*/
+}
+
 //TODO add arguments: input, output, arraySum
-__global__ void filter(unsigned char* inputImage, unsigned char* outputImage) {
-	//TODO i and j
+__global__ void filter(unsigned char* inputImage, unsigned char* outputImage, int rows, int cols, int step) {
+	 int x = threadIdx.x + blockIdx.x * blockDim.x;
+	 int y = threadIdx.y + blockIdx.y * blockDim.y;
+	 //todo maybe step should be used instead of cols
+	 int offset = (x + y * blockDim.x * gridDim.x)*3;
+
+
+
+	 //TODO assign to output
+	 // outputImage[step * y * blockDim.x * gridDim.x + x ]
+	 outputImage[offset ] = inputImage[offset ];//getGauss(inputImage, 0, x, y, rows, cols, step, offset);
+	 outputImage[offset + 1] = inputImage[offset + 1 ];//getGauss(inputImage, 1, x, y, rows, cols, step, offset);
+	 outputImage[offset + 2] = inputImage[offset + 2];//getGauss(inputImage, 2, x, y, rows, cols, step, offset);
+
 	//outputImage.at<cv::Vec3b>(i, j)[0] = getGauss(inputImage, 0, i, j, arraySum);
 	//outputImage.at<cv::Vec3b>(i, j)[1] = getGauss(inputImage, 1, i, j, arraySum);
 	//outputImage.at<cv::Vec3b>(i, j)[2] = getGauss(inputImage, 2, i, j, arraySum);
@@ -35,25 +77,9 @@ __global__ void filter(unsigned char* inputImage, unsigned char* outputImage) {
 
 }
 
-//TODO this will run on each thread in each block
-/*__device__ int getGauss(Mat image, int channel, int i, int j, int arraySum) {
-    int value = 0;
-    int outOfBounds = 0;
-    for (int x = -2; x <= 2; x++) {
-        for (int y = -2; y <=2; y++) {
-            if (i + x < 0 || i + x >= image.rows || j + y < 0 || j + y > image.cols ) {
-                outOfBounds += gaussMask[5 * (2 + x) + 2 + y];
-            } else {
-                value += image.at<Vec3b>(i + x, j + y)[channel]*gaussMask[5 * (2 + x) + 2 + y];
-            }
-        }
-    }
-    return value / (arraySum - outOfBounds);
-}*/
-
 int main(int argc, char **argv) {
     if (argc != 3 ) {
-        std::cout << "Invalid number of arguments!" << argc << std::endl;
+        std::cout << "Invalid number of arguments!" << std::endl;
         return EXIT_FAILURE;
     }
     Mat inputImage = imread(argv[1], IMREAD_COLOR);
@@ -82,6 +108,7 @@ int main(int argc, char **argv) {
     HANDLE_ERROR(cudaMemcpyToSymbol(gaussMask, GAUSS, sizeof(int) * 25));
 
     //INPUT AND OUTPUT IMAGES
+    //unsigned char from Mat: 1D array. i.e. b1,g1,r1,b2,g2,r2,…
     unsigned char *devInputImage, *devOutputImage;
     int imageMemSize = inputImage.rows*inputImage.step;
     HANDLE_ERROR(cudaMalloc<unsigned char>(&devInputImage, imageMemSize));
@@ -96,17 +123,21 @@ int main(int argc, char **argv) {
 	int gridX = (inputImage.rows + blockSide - 1) / blockSide;
 	int gridY = (inputImage.cols + blockSide - 1) / blockSide;
 
+	//IMAGE SIZES
+
 	dim3 grids(gridX, gridY);
 	dim3 threads(blockSide, blockSide);
 
 	//MAIN CALL TO CUDA
-	filter <<<grids, threads >>>(devInputImage, devOutputImage);
+	filter <<<grids, threads >>>(devInputImage, devOutputImage, inputImage.rows, inputImage.cols, inputImage.step);
 	// it should call _device_ method for each thread in each block
-	// copy content of output image back to C
+	// copy content of output image back to Cpp
+	HANDLE_ERROR(cudaMemcpy(outputImage.ptr(), devOutputImage, imageMemSize, cudaMemcpyDeviceToHost));
 	//measure time
 
 
   
     imwrite(argv[2], outputImage);
+    std::cout << "Finished!" << std::endl;
     return EXIT_SUCCESS;
 }
