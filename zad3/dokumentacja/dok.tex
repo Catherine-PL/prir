@@ -59,46 +59,44 @@ Grupa 4 & Katarzyna Kosiak i~Michał Folwarski & \ddmmyyyydate\today \tabularnew
 \hline
 \end{tabular}
 
-\section*{Zadanie 1 -- Rozmycie Gaussa w~OpenMP}
+\section*{Zadanie 3 -- Rozmycie Gaussa w CUDA}
 
-Program rozmywa zadane zdjęcie za pomocą algorytmu Gaussa z~maską o~wymiarach 5x5 korzystając z~zadanej liczby wątków.
-Zrównoleglono rozmywanie rzędów pikseli zadanego zdjęcia:
+Program rozmywa zadane zdjęcie za pomocą algorytmu Gaussa z maską o wymiarach 5x5 korzystając z technologii CUDA. \\
+
+Zdefiniowano dwie metody używane w CUDA:
 \begin{lstlisting}
-#pragma omp parallel for num_threads(numberOfThreads) default(shared) private(i,j)
-    for (i=0; i < rows; i++) {
-        for (j = 0; j < cols; j++) {
-            //obliczanie nowych wartosci R,G i B dla piksela
-        }
-    }
+
+__device__ int getGauss(unsigned char* image, int channel, int id , int cols, int rows, int arraySum)
+__global__ void filter(unsigned char* inputImage, unsigned char* outputImage, int cols, int rows, int arraySum)
+
 \end{lstlisting}
-Zastosowano takie instrukcje OpenMP, ponieważ:
-\begin{lista}
- \item \verb!for!: zrównoleglamy pętlę for (przebieg po wierszach),
- \item \verb!num_threads!: zrównoleglanie na zadaną w~argumentach wywołania programu liczbę wątków,
- \item \verb!default(shared)!: dla wygody domyślnie każda zmienna jest dostępna dla każdego wątku,
- \item \verb!private(i,j)!: każdy wątek dostaje kopię zmiennych przechowujących indeksy aktualnej iteracji.
-\end{lista}
+A następnie zrównoleglono rozmywanie rzędów pikseli zadanego zdjęcia (po wcześniejszej alokacji pamięci dla zmiennych dla CUDA i zapisania w nich obrazu wejściowego i danych maski):
+\begin{lstlisting}
 
-Domyślnie OpenMP rozdzieli pracę nad pętlą równomiernie pomiędzy wszystkie wątki. Ponieważ rozmywanie każdego piksela opiera się na tych samych działaniach (kolejne piksele nie stają się trudniejsze do przetworzenia) to taki podział nam odpowiada.
+filter <<<grid, blockSize >>>(devInputImage, devOutputImage, inputImage.rows, inputImage.cols, arraySum);
+//przepisanie obrazu wynikowego
+cudaMemcpy(outputImage.ptr(), devOutputImage, imageMemSize, cudaMemcpyDeviceToHost);
 
-Umieszczony poniżej wykres (Rysunek~1) pokazuje zależność czasu działania programu od liczby wątków dla przykładowego obrazu o~rozmiarze boku około 2500px na komputerze z~dwoma procesorami.
+\end{lstlisting}
+gdzie zmienna grid to liczba bloków uruchomionych równolegle, a zmienna blockSize to liczba wątków w każdym bloku. Funkcja filter jedynie wywołuje trzykrotnie (dla każdego kanału) właściwą metodę rozmywającą obraz (getGauss).\\
+
+Użyto jednowymiarowych bloków, ponieważ obraz zostaje przekazany do CUDA w postaci jednowymiarowej tablicy, gdzie każde trzy kolejne elementy opisują jeden pixel (r,b,g).\\
+
+
+Umieszczony poniżej wykres (Rysunek~1) pokazuje zależność czasu działania programu na maszynie z kartą GeForce GTX 480  (maksymalny rozmiar bloku 1024, maksymalna liczba bloków 65535) od liczby wątków dla przykładowego obrazu o rozmiarze boku około 1500px. \\
 
 \begin{figure}[!hbtp]
-  \centering
-  \includegraphics[width=0.7\textwidth]{wykres_zad1}
+ \centering
+  \includegraphics[width=0.9\textwidth]{wykres.png}
   \caption{Zależność czasu wykonania zadania od ilości wątków}
 \end{figure}
+Jak widać na wykresie, dla tego zadania nie ma większego znaczenia czy wykorzystuje się więcej bloków z mniejszą ilością wątków czy mniej bloków z większą ilością wątków (tak długo jak całkowita liczba wątków jest równa całkowitej liczbie pikseli, czyli nie wykonuje się zbędnych operacji typu tworzenie nieużytecznych wątków) - wynika to z faktu, że zadanie to nie wymaga dzielenia zasobów pomiędzy wątkami bloku. \\
+Wykorzystanie wielu wątków w bloku  w tym przypadku ma jedynie tę przewagę, że pozwala na przetwarzanie większych obrazów (bez przekroczenia limitu ilości bloków). Jedynie w przypadku zbyt dużej liczby wątków w stosunku do ilości pikseli widać, że lepsze czasy uzyskuje się przy użyciu mniejszej ilości wątków w bloku a większej ilości bloków - wynika to z architektury kart graficznych.
 
-Jak widać czas skrócił się przy zrównolegleniu na tyle wątków, ile jest procesorów. Dalsze zwiększanie liczby wątków może tylko pogorszyć czas, ponieważ musi zostać poświęcony dodatkowy czas na przełączanie kontekstu dla poszczególnych wątków na współdzielonych procesorach.
-
-Kolejny wykres (Rysunek~2) pokazuje dodatkowo, że mimo posiadania dwóch procesorów i~dwóch wątków nie nastąpiło idealnie dwukrotne przyspieszenie -- wynika to z~faktu, że przydzielanie zadań wątkom i~zarządzanie nimi także wymaga zasobów.
-
-\begin{figure}[!hbtp]
-  \centering
-  \includegraphics[width=0.7\textwidth]{wykres2_zad1}
-  \caption{Zależność przyspieszenia wykonywania zadania od ilości wątków w~stosunku do niezrównoleglonego zadania}
-\end{figure}
+W stosunku do niezrównoleglonego zadania uzyskano dla tego przypadku maksymalnie 700-krotne przyspieszenie. Liczba ta odbiega znacząco od przyspieszenia idealnego, wynika to m.in. z faktu, że każdy z wielu wątków musi zostać zainicjalizowany oraz  że liczby wątków były wyznaczane empirycznie. GPU ma charakterystyczną architekturę i wiele właściwości tej karty wpływa na osiągane przyspieszenie - aby je poprawić, należałoby dokładnie zapoznać się z użytym modelem karty graficznej.
 
 \subsubsection*{Wnioski }
-Zadanie udało się wykonać -- dokonano zrównoleglenia obliczeń. Wykorzystanie OpenMP w~tym przypadku (niezależne od siebie obliczenia o~tej samej złożoności) było skuteczne i~nie wymagało wiele konfiguracji, co niewątpliwie jest dużą zaletą.
+Zadanie udało się wykonać - dokonano zrównoleglenia obliczeń. Wykorzystanie CUDA spowodowało ogromne przyspieszenie procesu w stosunku do tradycyjnego rozwiązania. Dzięki temu, że GPU posiada wiele jednostek mogących wykonać obliczenia, zrównoleglanie obliczeń jest bardzo skuteczne. \\
+
+ Zauważono jednak, że podczas projektowania rozwiązania każdego problemu trzeba wziąć pod uwagę ograniczenia wynikające z architektury docelowej karty graficznej, a skalibrowanie ilości wątków i bloków wymaga niemałej wiedzy o jej parametrach i ich znaczeniu.
 \end{document}
