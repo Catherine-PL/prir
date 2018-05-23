@@ -23,33 +23,33 @@ int GAUSS[25] = {1, 1, 2, 1, 1,
                 };
 
 __constant__ int gaussMask[25];
-__constant__ int gaussSum;
 
-__device__ int getGauss(unsigned char* image, int channel, int id , int size) {
+__device__ int getGauss(unsigned char* image, int channel, int id , int cols, int rows, int arraySum) {
     int value = 0;
     int outOfBounds = 0;
 
-    //a -12 to 12 because mask is 25
-    for (int a = -12; a <= 12; a++) {
-    	// *3 because there are 3 channels
-    	int current = id + a*3;
-    	if (current < 0 | current >= size * 3) {
-    		outOfBounds += gaussMask[12 + a];
-    	} else {
-    		//TODO this doesnt work
-    		//but returning value = image[current + channel] seems to get correct pixels. what's wrong??????
-    		value += image[current + channel]*gaussMask[12 + a];
+    for (int i = -2; i <= 2; i++) {
+    	for (int j = -2; j <= 2; j++) {
+    		// multiplyiing by 3 because there are 3 channels
+    		int current = id + (i*cols + j)*3;
+    		//adding 12 to neutrilize negative values of a mask which has size 12
+    		int maskIndex = 12 + 5*i+j;
+    		if (current < 0 || current >= cols*rows * 3) {
+    		    	outOfBounds += gaussMask[maskIndex];
+    		} else {
+    		    	value += image[current + channel]*gaussMask[maskIndex];
+    		}
     	}
     }
-    return value / (gaussSum - outOfBounds);
+    return value / (arraySum - outOfBounds);
 }
 
-__global__ void filter(unsigned char* inputImage, unsigned char* outputImage, int size) {
+__global__ void filter(unsigned char* inputImage, unsigned char* outputImage, int cols, int rows, int arraySum) {
 	 int tid = (threadIdx.x + blockIdx.x * blockDim.x)*3;
 
-	 outputImage[tid] = getGauss(inputImage, 0, tid, size);
-	 outputImage[tid + 1] = getGauss(inputImage, 1, tid, size);
-	 outputImage[tid + 2] = getGauss(inputImage, 2, tid, size);
+	 outputImage[tid] = getGauss(inputImage, 0, tid, cols, rows, arraySum);
+	 outputImage[tid + 1] = getGauss(inputImage, 1, tid, cols, rows, arraySum);
+	 outputImage[tid + 2] = getGauss(inputImage, 2, tid, cols, rows, arraySum);
 }
 
 int main(int argc, char **argv) {
@@ -65,13 +65,13 @@ int main(int argc, char **argv) {
     Mat outputImage = inputImage.clone();
 
     //GAUSS ARRAY SUM
-    int *arraySum;
+    int arraySum = 0;
         for(int count = 0; count < 25; count++) {
             arraySum += GAUSS[count];
         }
 
     // GAUSS MASK SIZE
-    HANDLE_ERROR(cudaMemcpyToSymbol(gaussSum, &arraySum, sizeof(int)));
+    //HANDLE_ERROR(cudaMemcpyToSymbol(gaussSum, arraySum, sizeof(int)));
 
     //GAUSS MASK
     HANDLE_ERROR(cudaMemcpyToSymbol(gaussMask, GAUSS, sizeof(int) * 25));
@@ -90,14 +90,12 @@ int main(int argc, char **argv) {
 	int grid = (inputImage.rows*inputImage.cols + blockSize - 1) / blockSize;
 
 	//MAIN CALL TO CUDA
-	filter <<<grid, blockSize >>>(devInputImage, devOutputImage, inputImage.rows * inputImage.cols);
+	filter <<<grid, blockSize >>>(devInputImage, devOutputImage, inputImage.rows, inputImage.cols, arraySum);
 
 	//COPY BACK THE IMAGE
 	HANDLE_ERROR(cudaMemcpy(outputImage.ptr(), devOutputImage, imageMemSize, cudaMemcpyDeviceToHost));
 	//TODO measure time
 
-
-  
     imwrite(argv[2], outputImage);
     std::cout << "Finished!" << std::endl;
     return EXIT_SUCCESS;
