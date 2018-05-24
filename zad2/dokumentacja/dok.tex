@@ -80,36 +80,29 @@ if (rank == 0) {
 	// wyslij blok przefiltrowanego obrazu oraz jego rozmiar do watku 0
 }
 \end{lstlisting}
-Zastosowano takie instrukcje OpenMP, ponieważ:
-\begin{lista}
- \item \verb!for!: zrównoleglamy pętlę for (przebieg po wierszach),
- \item \verb!num_threads!: zrównoleglanie na zadaną w~argumentach wywołania programu liczbę wątków,
- \item \verb!default(shared)!: dla wygody domyślnie każda zmienna jest dostępna dla każdego wątku,
- \item \verb!private(i,j)!: każdy wątek dostaje kopię zmiennych przechowujących indeksy aktualnej iteracji.
-\end{lista}
 
 Wątek zerowy został uznany za nadzorujący całą operację filtrowania obrazu - wykluczono go z przetwarzania obrazu w celu zwiększenia  przejrzystości programu. \\
 
 Wątek zerowy rozsyła jednokrotnie równe bloki obrazu pozostałym wątkom, dzięki czemu wszystkie wykonują tę samą ilość działań o nierosnącym poziomie trudności i nie muszą niepotrzebnie czekać na kolejne wiadomości od wątku zerowego. To rozwiązanie spełnia nasze oczekiwania pod względem prostoty oraz skuteczności.\\ 
 
-Umieszczony poniżej wykres (Rysunek~1) pokazuje zależność czasu działania programu od liczby wątków dla przykładowego obrazu o~rozmiarze boku około 1500px na komputerze z~TODO procesorami.
-TODO TODO TODO wykres
+Umieszczony poniżej wykres (Rysunek~1) pokazuje zależność czasu działania programu od liczby wątków dla przykładowego obrazu o~rozmiarze boku około 1500px na komputerze z czterema procesorami.
 
-%\begin{figure}[!hbtp]
-%  \centering
-%  \includegraphics[width=0.7\textwidth]{wykres_zad1}
-%  \caption{Zależność czasu wykonania zadania od ilości wątków}
-%\end{figure}
+\begin{figure}[!hbtp]
+  \centering
+  \includegraphics[width=0.9\textwidth]{wykres.png}
+  \caption{Zależność czasu wykonania zadania od ilości wątków}
+\end{figure}
 
-Jak widać czas skracał się aż do zrównoleglenia na liczbę wątków o jeden większą niż  liczba procesorów TODO. Dalsze zwiększanie liczby wątków może tylko pogorszyć czas, ponieważ musi zostać poświęcony dodatkowy czas na przełączanie kontekstu dla poszczególnych wątków na współdzielonych procesorach.
+Najkrótszy czas osiągnięto podczas zrównoleglenia na liczbę wątków równą liczbie procesorów. Dalsze zwiększanie liczby wątków może tylko pogorszyć czas, ponieważ musi zostać poświęcony dodatkowy czas na przełączanie kontekstu dla poszczególnych wątków na współdzielonych procesorach.  \\
+Czas wykonania zadania dla dwóch wątków jest większy niż dla jednego ponieważ tylko jeden z nich wykonuje właściwe obliczenia, podczas gdy wątek zerowy  (pełniący rolę administratora) czeka na wiadomość z przefiltrowanym obrazem.
 
 Kolejny wykres (Rysunek~2) pokazuje dodatkowo, że nie nastąpiło idealnie dwukrotne przyspieszenie -- wynika to z~faktu, że przydzielanie zadań wątkom i~zarządzanie nimi także wymaga zasobów oraz tego, że wątek zerowy pełni rolę nadzorującą i nie wykonuje obliczeń związanych z filtrowaniem obrazu.
 
-%\begin{figure}[!hbtp]
-%  \centering
-%  \includegraphics[width=0.7\textwidth]{wykres2_zad1}
-%  \caption{Zależność przyspieszenia wykonywania zadania od ilości wątków w~stosunku do niezrównoleglonego zadania}
-%\end{figure}
+\begin{figure}[!hbtp]
+  \centering
+  \includegraphics[width=0.8\textwidth]{wykres2.png}
+  \caption{Zależność przyspieszenia wykonywania zadania od ilości wątków w~stosunku do niezrównoleglonego zadania}
+\end{figure}
 
 \subsubsection*{Wnioski }
 Zadanie udało się wykonać -- dokonano zrównoleglenia obliczeń. Wykorzystanie MPI w~tym przypadku (niezależne od siebie obliczenia o~tej samej złożoności) było skuteczne. Komunikacja między wątkami została osiągnięta poprzez wykorzystanie systemu wysyłania i odbierania wiadomości. W stosunku do rozwiązania z wykorzystaniem OpenMP, użycie MPI jest trudniejsze - wymaga podjęcia decyzji o roli każdego z wątków, jednak dzięki temu można lepiej sterować programem.
