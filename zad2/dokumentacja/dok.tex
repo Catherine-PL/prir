@@ -59,17 +59,26 @@ Grupa 4 & Katarzyna Kosiak i~Michał Folwarski & \ddmmyyyydate\today \tabularnew
 \hline
 \end{tabular}
 
-\section*{Zadanie 1 -- Rozmycie Gaussa w~OpenMP}
+\section*{Zadanie 1 -- Rozmycie Gaussa w MPI}
 
 Program rozmywa zadane zdjęcie za pomocą algorytmu Gaussa z~maską o~wymiarach 5x5 korzystając z~zadanej liczby wątków.
 Zrównoleglono rozmywanie rzędów pikseli zadanego zdjęcia:
 \begin{lstlisting}
-#pragma omp parallel for num_threads(numberOfThreads) default(shared) private(i,j)
-    for (i=0; i < rows; i++) {
-        for (j = 0; j < cols; j++) {
-            //obliczanie nowych wartosci R,G i B dla piksela
-        }
-    }
+if (rank == 0) {
+	if (numberOfProcesses == 1) {
+	//oblicz w jednym watku
+	} else {
+	// podziel obraz na tyle blokow ile jest pozostalych watkow
+	// kazdemu z watkow poza aktualnym wyslij jeden blok oraz informacje o jego rozmiarze
+	// odbierz wszystkie bloki przefiltrowanego obrazu	 oraz ich rozmiary
+	// poskladaj bloki do jednego obrazu
+	}
+} else {
+	// odbierz blok obrazu
+	// odbierz rozmiar bloku obrazu
+	// przefiltruj otrzymany blok
+	// wyslij blok przefiltrowanego obrazu oraz jego rozmiar do watku 0
+}
 \end{lstlisting}
 Zastosowano takie instrukcje OpenMP, ponieważ:
 \begin{lista}
@@ -79,26 +88,29 @@ Zastosowano takie instrukcje OpenMP, ponieważ:
  \item \verb!private(i,j)!: każdy wątek dostaje kopię zmiennych przechowujących indeksy aktualnej iteracji.
 \end{lista}
 
-Domyślnie OpenMP rozdzieli pracę nad pętlą równomiernie pomiędzy wszystkie wątki. Ponieważ rozmywanie każdego piksela opiera się na tych samych działaniach (kolejne piksele nie stają się trudniejsze do przetworzenia) to taki podział nam odpowiada.
+Wątek zerowy został uznany za nadzorujący całą operację filtrowania obrazu - wykluczono go z przetwarzania obrazu w celu zwiększenia  przejrzystości programu. \\
 
-Umieszczony poniżej wykres (Rysunek~1) pokazuje zależność czasu działania programu od liczby wątków dla przykładowego obrazu o~rozmiarze boku około 2500px na komputerze z~dwoma procesorami.
+Wątek zerowy rozsyła jednokrotnie równe bloki obrazu pozostałym wątkom, dzięki czemu wszystkie wykonują tę samą ilość działań o nierosnącym poziomie trudności i nie muszą niepotrzebnie czekać na kolejne wiadomości od wątku zerowego. To rozwiązanie spełnia nasze oczekiwania pod względem prostoty oraz skuteczności.\\ 
 
-\begin{figure}[!hbtp]
-  \centering
-  \includegraphics[width=0.7\textwidth]{wykres_zad1}
-  \caption{Zależność czasu wykonania zadania od ilości wątków}
-\end{figure}
+Umieszczony poniżej wykres (Rysunek~1) pokazuje zależność czasu działania programu od liczby wątków dla przykładowego obrazu o~rozmiarze boku około 1500px na komputerze z~TODO procesorami.
+TODO TODO TODO wykres
 
-Jak widać czas skrócił się przy zrównolegleniu na tyle wątków, ile jest procesorów. Dalsze zwiększanie liczby wątków może tylko pogorszyć czas, ponieważ musi zostać poświęcony dodatkowy czas na przełączanie kontekstu dla poszczególnych wątków na współdzielonych procesorach.
+%\begin{figure}[!hbtp]
+%  \centering
+%  \includegraphics[width=0.7\textwidth]{wykres_zad1}
+%  \caption{Zależność czasu wykonania zadania od ilości wątków}
+%\end{figure}
 
-Kolejny wykres (Rysunek~2) pokazuje dodatkowo, że mimo posiadania dwóch procesorów i~dwóch wątków nie nastąpiło idealnie dwukrotne przyspieszenie -- wynika to z~faktu, że przydzielanie zadań wątkom i~zarządzanie nimi także wymaga zasobów.
+Jak widać czas skracał się aż do zrównoleglenia na liczbę wątków o jeden większą niż  liczba procesorów TODO. Dalsze zwiększanie liczby wątków może tylko pogorszyć czas, ponieważ musi zostać poświęcony dodatkowy czas na przełączanie kontekstu dla poszczególnych wątków na współdzielonych procesorach.
 
-\begin{figure}[!hbtp]
-  \centering
-  \includegraphics[width=0.7\textwidth]{wykres2_zad1}
-  \caption{Zależność przyspieszenia wykonywania zadania od ilości wątków w~stosunku do niezrównoleglonego zadania}
-\end{figure}
+Kolejny wykres (Rysunek~2) pokazuje dodatkowo, że nie nastąpiło idealnie dwukrotne przyspieszenie -- wynika to z~faktu, że przydzielanie zadań wątkom i~zarządzanie nimi także wymaga zasobów oraz tego, że wątek zerowy pełni rolę nadzorującą i nie wykonuje obliczeń związanych z filtrowaniem obrazu.
+
+%\begin{figure}[!hbtp]
+%  \centering
+%  \includegraphics[width=0.7\textwidth]{wykres2_zad1}
+%  \caption{Zależność przyspieszenia wykonywania zadania od ilości wątków w~stosunku do niezrównoleglonego zadania}
+%\end{figure}
 
 \subsubsection*{Wnioski }
-Zadanie udało się wykonać -- dokonano zrównoleglenia obliczeń. Wykorzystanie OpenMP w~tym przypadku (niezależne od siebie obliczenia o~tej samej złożoności) było skuteczne i~nie wymagało wiele konfiguracji, co niewątpliwie jest dużą zaletą.
+Zadanie udało się wykonać -- dokonano zrównoleglenia obliczeń. Wykorzystanie MPI w~tym przypadku (niezależne od siebie obliczenia o~tej samej złożoności) było skuteczne. Komunikacja między wątkami została osiągnięta poprzez wykorzystanie systemu wysyłania i odbierania wiadomości. W stosunku do rozwiązania z wykorzystaniem OpenMP, użycie MPI jest trudniejsze - wymaga podjęcia decyzji o roli każdego z wątków, jednak dzięki temu można lepiej sterować programem.
 \end{document}
