@@ -55,48 +55,58 @@
 
 \noindent
 \begin{tabular}{|c|p{11cm}|c|} \hline
-Grupa 4 & Katarzyna Kosiak i~Michał Folwarski & \ddmmyyyydate\today \tabularnewline
+Grupa~4 & Katarzyna Kosiak i~Michał Folwarski & \ddmmyyyydate\today \tabularnewline
 \hline
 \end{tabular}
 
-\section*{Zadanie 3 -- Rozmycie Gaussa w CUDA}
+\section*{Zadanie~3 -- Rozmycie Gaussa w~CUDA}
 
-Program rozmywa zadane zdjęcie za pomocą algorytmu Gaussa z maską o wymiarach 5x5 korzystając z technologii CUDA. \\
+Program rozmywa zadany obraz za pomocą algorytmu Gaussa z~maską o~wymiarach 5x5 korzystając z~technologii CUDA.
 
-Zdefiniowano dwie metody używane w CUDA:
+\noindent Zdefiniowano dwie metody używane w~CUDA:
 \begin{lstlisting}
+__device__ int getGauss(unsigned char* image,
+                        int channel, int id,
+                        int cols, int rows,
+                        int arraySum)
 
-__device__ int getGauss(unsigned char* image, int channel, int id , int cols, int rows, int arraySum)
-__global__ void filter(unsigned char* inputImage, unsigned char* outputImage, int cols, int rows, int arraySum)
-
+__global__ void filter(unsigned char* inputImage,
+                       unsigned char* outputImage,
+                       int cols, int rows,
+                       int arraySum)
 \end{lstlisting}
-A następnie zrównoleglono rozmywanie rzędów pikseli zadanego zdjęcia (po wcześniejszej alokacji pamięci dla zmiennych dla CUDA i zapisania w nich obrazu wejściowego i danych maski):
+Następnie zrównoleglono rozmywanie rzędów pikseli zadanego obrazu (po wcześniejszej alokacji pamięci zmiennych dla CUDA oraz zapisania w~nich obrazu wejściowego i~danych maski) zrealizowano w~sposób następujący:
 \begin{lstlisting}
-
-filter <<<grid, blockSize >>>(devInputImage, devOutputImage, inputImage.rows, inputImage.cols, arraySum);
+filter <<< grid, blockSize >>> (devInputImage,
+                                devOutputImage,
+                                inputImage.rows,
+                                inputImage.cols,
+                                arraySum);
 //przepisanie obrazu wynikowego
-cudaMemcpy(outputImage.ptr(), devOutputImage, imageMemSize, cudaMemcpyDeviceToHost);
-
+cudaMemcpy(outputImage.ptr(),
+           devOutputImage,
+           imageMemSize,
+           cudaMemcpyDeviceToHost);
 \end{lstlisting}
-gdzie zmienna grid to liczba bloków uruchomionych równolegle, a zmienna blockSize to liczba wątków w każdym bloku. Funkcja filter jedynie wywołuje trzykrotnie (dla każdego kanału) właściwą metodę rozmywającą obraz (getGauss).\\
+Gdzie zmienna \verb!grid! to liczba bloków uruchomionych równolegle, a~zmienna \verb!blockSize! to liczba wątków w~każdym bloku. Funkcja \verb!filter! jedynie wywołuje trzykrotnie (dla każdego kanału) właściwą metodę rozmywającą obraz (getGauss).
 
-Użyto jednowymiarowych bloków, ponieważ obraz zostaje przekazany do CUDA w postaci jednowymiarowej tablicy, gdzie każde trzy kolejne elementy opisują jeden pixel (r,b,g).\\
+Użyto jednowymiarowych bloków, ponieważ obraz zostaje przekazany do CUDA w~postaci jednowymiarowej tablicy, gdzie każde trzy kolejne elementy opisują jeden pikseel -- jego składowe (B,G,R).
 
-
-Umieszczony poniżej wykres (Rysunek~1) pokazuje zależność czasu działania programu na maszynie z kartą GeForce GTX 480  (maksymalny rozmiar bloku 1024, maksymalna liczba bloków 65535) od liczby wątków dla przykładowego obrazu o rozmiarze boku około 1500px. \\
+Umieszczony poniżej wykres (Rysunek~1) pokazuje zależność czasu działania programu na maszynie z~kartą GeForce GTX 480  (maksymalny rozmiar bloku 1024, maksymalna liczba bloków 65535) od liczby wątków dla przykładowego obrazu o~rozmiarze boku około 1500px.
 
 \begin{figure}[!hbtp]
  \centering
   \includegraphics[width=0.9\textwidth]{wykres.png}
   \caption{Zależność czasu wykonania zadania od ilości wątków}
 \end{figure}
-Jak widać na wykresie, dla tego zadania nie ma większego znaczenia czy wykorzystuje się więcej bloków z mniejszą ilością wątków czy mniej bloków z większą ilością wątków (tak długo jak całkowita liczba wątków jest równa całkowitej liczbie pikseli, czyli nie wykonuje się zbędnych operacji typu tworzenie nieużytecznych wątków) - wynika to z faktu, że zadanie to nie wymaga dzielenia zasobów pomiędzy wątkami bloku. \\
-Wykorzystanie wielu wątków w bloku  w tym przypadku ma jedynie tę przewagę, że pozwala na przetwarzanie większych obrazów (bez przekroczenia limitu ilości bloków). Jedynie w przypadku zbyt dużej liczby wątków w stosunku do ilości pikseli widać, że lepsze czasy uzyskuje się przy użyciu mniejszej ilości wątków w bloku a większej ilości bloków - wynika to z architektury kart graficznych.
+Jak widać na wykresie, dla tego zadania nie ma większego znaczenia czy wykorzystuje się więcej bloków z~mniejszą ilością wątków czy mniej bloków z~większą ilością wątków (tak długo jak całkowita liczba wątków jest równa całkowitej liczbie pikseli, czyli nie wykonuje się zbędnych operacji typu tworzenie nieużytecznych wątków) -- wynika to z~faktu, że zadanie to nie wymaga dzielenia zasobów pomiędzy wątkami bloku.
 
-W stosunku do niezrównoleglonego zadania uzyskano dla tego przypadku maksymalnie 700-krotne przyspieszenie. Liczba ta odbiega znacząco od przyspieszenia idealnego, wynika to m.in. z faktu, że każdy z wielu wątków musi zostać zainicjalizowany oraz  że liczby wątków były wyznaczane empirycznie. GPU ma charakterystyczną architekturę i wiele właściwości tej karty wpływa na osiągane przyspieszenie - aby je poprawić, należałoby dokładnie zapoznać się z użytym modelem karty graficznej.
+Wykorzystanie wielu wątków w~bloku w~tym przypadku ma jedynie tę przewagę, że pozwala na przetwarzanie większych obrazów (bez przekroczenia limitu ilości bloków). Jedynie w~przypadku zbyt dużej liczby wątków w~stosunku do ilości pikseli widać, że lepsze czasy uzyskuje się przy użyciu mniejszej ilości wątków w~bloku a~większej ilości bloków -- wynika to z~architektury kart graficznych.
+
+W~stosunku do niezrównoleglonego zadania uzyskano dla tego przypadku maksymalnie 700-krotne przyspieszenie. Liczba ta odbiega znacząco od przyspieszenia idealnego, wynika to m.in. z~faktu, że każdy z~wielu wątków musi zostać zainicjalizowany oraz że liczba wątków była wyznaczana empirycznie. GPU ma charakterystyczną architekturę i~wiele właściwości tej karty wpływa na osiągane przyspieszenie -- aby je poprawić, należałoby dokładnie zapoznać się z~użytym modelem karty graficznej.
 
 \subsubsection*{Wnioski }
-Zadanie udało się wykonać - dokonano zrównoleglenia obliczeń. Wykorzystanie CUDA spowodowało ogromne przyspieszenie procesu w stosunku do tradycyjnego rozwiązania. Dzięki temu, że GPU posiada wiele jednostek mogących wykonać obliczenia, zrównoleglanie obliczeń jest bardzo skuteczne. \\
+Zadanie udało się wykonać -- dokonano zrównoleglenia obliczeń. Wykorzystanie technologii CUDA spowodowało ogromne przyspieszenie procesu w~stosunku do tradycyjnego rozwiązania. Dzięki temu, że GPU posiada wiele jednostek mogących wykonać obliczenia, zrównoleglanie obliczeń jest bardzo skuteczne.
 
- Zauważono jednak, że podczas projektowania rozwiązania każdego problemu trzeba wziąć pod uwagę ograniczenia wynikające z architektury docelowej karty graficznej, a skalibrowanie ilości wątków i bloków wymaga niemałej wiedzy o jej parametrach i ich znaczeniu.
+Zauważono jednak, że podczas projektowania rozwiązania każdego problemu trzeba wziąć pod uwagę ograniczenia wynikające z~architektury docelowej karty graficznej, a~skalibrowanie ilości wątków i~bloków wymaga niemałej wiedzy o~jej parametrach i~ich znaczeniu.
 \end{document}
