@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
 
 
     //GRIDS AND THREADS SIZES
-    int blockSize = 512;
+    int blockSize = 1024;
     int grid = (inputImage.rows*inputImage.cols + blockSize - 1) / blockSize;
 
     if (grid > 65535 ){
