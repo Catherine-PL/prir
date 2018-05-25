@@ -79,8 +79,8 @@ Następnie zrównoleglono rozmywanie rzędów pikseli zadanego obrazu (po wcześ
 \begin{lstlisting}
 filter <<< grid, blockSize >>> (devInputImage,
                                 devOutputImage,
-                                inputImage.rows,
                                 inputImage.cols,
+                                inputImage.rows,
                                 arraySum);
 //przepisanie obrazu wynikowego
 cudaMemcpy(outputImage.ptr(),

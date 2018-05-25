@@ -44,10 +44,11 @@ __device__ int getGauss(unsigned char* image, int channel, int id , int cols, in
 
 __global__ void filter(unsigned char* inputImage, unsigned char* outputImage, int cols, int rows, int arraySum) {
     int tid = (threadIdx.x + blockIdx.x * blockDim.x)*3;
-    if (tid <  cols*rows * 3 - 3) {
+    while (tid <  cols*rows * 3 - 3) {
         outputImage[tid] = getGauss(inputImage, 0, tid, cols, rows, arraySum);
         outputImage[tid + 1] = getGauss(inputImage, 1, tid, cols, rows, arraySum);
         outputImage[tid + 2] = getGauss(inputImage, 2, tid, cols, rows, arraySum);
+        tid += blockDim.x * gridDim.x;
     }
 }
 
@@ -85,6 +86,9 @@ int main(int argc, char **argv) {
     int blockSize = 512;
     int grid = (inputImage.rows*inputImage.cols + blockSize - 1) / blockSize;
 
+    if (grid > 65535 ){
+        grid = 65535;
+    }
     //TIME MEASUREMENT INIT
     float totalTime = 0;
     cudaEvent_t start, stop;
@@ -92,7 +96,7 @@ int main(int argc, char **argv) {
     cudaEventRecord(start, 0);
     cudaEventCreate(&stop);
     //MAIN CALL TO CUDA
-    filter <<<grid, blockSize >>>(devInputImage, devOutputImage, inputImage.rows, inputImage.cols, arraySum);
+    filter <<<grid, blockSize >>>(devInputImage, devOutputImage, inputImage.cols, inputImage.rows, arraySum);
 
     //CALCULATE ELAPSED TIME
     cudaEventRecord(stop, 0);
