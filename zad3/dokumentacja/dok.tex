@@ -103,7 +103,7 @@ Jak widać na wykresie, dla tego zadania nie ma większego znaczenia czy wykorzy
 
 Wykorzystanie wielu wątków w~bloku w~tym przypadku ma jedynie tę przewagę, że pozwala na przetwarzanie większych obrazów (bez przekroczenia limitu ilości bloków). Jedynie w~przypadku zbyt dużej liczby wątków w~stosunku do ilości pikseli widać, że lepsze czasy uzyskuje się przy użyciu mniejszej ilości wątków w~bloku a~większej ilości bloków -- wynika to z~architektury kart graficznych.
 
-W~stosunku do niezrównoleglonego zadania uzyskano dla tego przypadku maksymalnie 700-krotne przyspieszenie. Liczba ta odbiega znacząco od przyspieszenia idealnego, wynika to m.in. z~faktu, że każdy z~wielu wątków musi zostać zainicjalizowany oraz że liczba wątków była wyznaczana empirycznie. GPU ma charakterystyczną architekturę i~wiele właściwości tej karty wpływa na osiągane przyspieszenie -- aby je poprawić, należałoby dokładnie zapoznać się z~użytym modelem karty graficznej.
+W~stosunku do niezrównoleglonego zadania na CPU uzyskano dla tego przypadku maksymalnie 700-krotne przyspieszenie. Liczba ta odbiega znacząco od przyspieszenia idealnego, wynika to m.in. z~faktu, że każdy z~wielu wątków musi zostać zainicjalizowany oraz że liczba wątków była wyznaczana empirycznie. GPU ma charakterystyczną architekturę i~wiele właściwości tej karty wpływa na osiągane przyspieszenie -- aby je poprawić, należałoby dokładnie zapoznać się z~użytym modelem karty graficznej.
 
 \subsubsection*{Wnioski }
 Zadanie udało się wykonać -- dokonano zrównoleglenia obliczeń. Wykorzystanie technologii CUDA spowodowało ogromne przyspieszenie procesu w~stosunku do tradycyjnego rozwiązania. Dzięki temu, że GPU posiada wiele jednostek mogących wykonać obliczenia, zrównoleglanie obliczeń jest bardzo skuteczne.
