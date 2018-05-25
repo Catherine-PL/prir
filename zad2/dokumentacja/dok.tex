@@ -60,7 +60,7 @@ Grupa~4 & Katarzyna Kosiak i~Michał Folwarski & \ddmmyyyydate\today \tabularnew
 \end{tabular}
 
 \section*{Zadanie~2 -- Rozmycie Gaussa w~MPI}
-Program rozmywa zadane zdjęcie za pomocą algorytmu Gaussa z~maską o~wymiarach 5x5 korzystając z~zadanej liczby wątków.
+Program rozmywa zadane zdjęcie za pomocą algorytmu Gaussa z~maską o~wymiarach 5x5 korzystając z~zadanej liczby procesów.
 Zrównoleglono rozmywanie rzędów pikseli zadanego zdjęcia:
 \begin{lstlisting}
 if (rank == 0) {
@@ -80,20 +80,20 @@ if (rank == 0) {
 }
 \end{lstlisting}
 
-Wątek zerowy został uznany za nadzorujący całą operację filtrowania obrazu -- wykluczono go z~przetwarzania obrazu w~celu zwiększenia przejrzystości programu. Wątek zerowy rozsyła jednokrotnie równe bloki obrazu pozostałym wątkom, dzięki czemu wszystkie wykonują tę samą ilość działań o nierosnącym poziomie trudności i~nie muszą niepotrzebnie czekać na kolejne wiadomości od wątku zerowego. To rozwiązanie spełnia nasze oczekiwania pod względem prostoty oraz skuteczności.
+Proces zerowy został uznany za nadzorujący całą operację filtrowania obrazu -- wykluczono go z~przetwarzania obrazu w~celu zwiększenia przejrzystości programu. Wątek zerowy rozsyła jednokrotnie równe bloki obrazu pozostałym procesom, dzięki czemu wszystkie wykonują tę samą ilość działań o nierosnącym poziomie trudności i~nie muszą niepotrzebnie czekać na kolejne wiadomości od procesu zerowego. To rozwiązanie spełnia nasze oczekiwania pod względem prostoty oraz skuteczności.
 
 \begin{figure}[!hbtp]
   \centering
-  \includegraphics[width=0.9\textwidth]{wykres.png}
+  \includegraphics[width=0.8\textwidth]{wykres.png}
   \caption{Zależność czasu wykonania zadania od ilości procesów}
 \end{figure}
-Zamieszczony wykres na rysunku~1 pokazuje zależność czasu działania programu od liczby wątków dla przykładowego obrazu o~rozmiarze boku około 1500px na komputerze z~czterema procesorami.
+Zamieszczony wykres na rysunku~1 pokazuje zależność czasu działania programu od liczby procesów dla przykładowego obrazu o~rozmiarze boku około 1500px na komputerze z~czterema procesorami.
 
-Najkrótszy czas osiągnięto podczas zrównoleglenia na liczbę procesów równą liczbie procesorów. Dalsze zwiększanie liczby wątków może tylko pogorszyć czas, ponieważ musi zostać poświęcony dodatkowy czas na przełączanie kontekstu dla poszczególnych wątków na współdzielonych procesorach.
+Najkrótszy czas osiągnięto podczas zrównoleglenia na liczbę procesów równą liczbie procesorów. Dalsze zwiększanie liczby procesów może tylko pogorszyć czas, ponieważ musi zostać poświęcony dodatkowy czas na przełączanie kontekstu dla poszczególnych procesów na współdzielonych procesorach.
 
-Czas wykonania zadania dla dwóch wątków jest większy niż dla jednego ponieważ tylko jeden z~nich wykonuje właściwe obliczenia, podczas gdy wątek zerowy (pełniący rolę administratora) czeka na odebranie wiadomości z~przefiltrowanym obrazem.
+Czas wykonania zadania dla dwóch procesów jest większy niż dla jednego ponieważ tylko jeden z~nich wykonuje właściwe obliczenia, podczas gdy wątek zerowy (pełniący rolę administratora) czeka na odebranie wiadomości z~przefiltrowanym obrazem.
 
-Kolejny wykres (Rysunek~2) pokazuje dodatkowo, że nie nastąpiło idealnie trzykrotne przyspieszenie -- wynika to z~faktu, że przydzielanie zadań wątkom i~zarządzanie nimi także wymaga zasobów oraz tego, że wątek zerowy pełni rolę nadzorującą i~nie wykonuje obliczeń związanych z~filtrowaniem obrazu.
+Kolejny wykres (Rysunek~2) pokazuje dodatkowo, że nie nastąpiło idealnie trzykrotne przyspieszenie -- wynika to z~faktu, że przydzielanie zadań procesom i~zarządzanie nimi także wymaga zasobów oraz tego, że wątek zerowy pełni rolę nadzorującą i~nie wykonuje obliczeń związanych z~filtrowaniem obrazu.
 
 \begin{figure}[!hbtp]
   \centering
