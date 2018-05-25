@@ -76,11 +76,18 @@ int main(int argc, char **argv) {
             blockRows = rows/(numberOfProcesses - 1);
             start = Wtime();
             for (int i = 1; i < numberOfProcesses; i++) {
-                top = (i-1) * blockRows;
+                top = (i-1) * blockRows -2;
+                if (top < 0) {
+                	top = 0;
+                }
+                
                 if (i == (numberOfProcesses - 1)) {
                     bottom = inputImage.rows;
                 } else {
-                    bottom = i * blockRows;
+                    bottom = i * blockRows + 2;
+                    if (bottom > inputImage.rows) {
+                    	bottom = inputImage.rows;
+                    }
                 }
                 Mat block = Mat::zeros(cv::Size(cols, bottom-top), CV_8UC3);
                 Rect r(0, top, cols, bottom-top);
@@ -97,6 +104,12 @@ int main(int argc, char **argv) {
                 COMM_WORLD.Recv(blockSize, 3, INT, i, 3);
                 Mat outputBlock = Mat::zeros(cv::Size(blockSize[1], blockSize[0]), CV_8UC3);
                 COMM_WORLD.Recv(outputBlock.data, outputBlock.cols * outputBlock.rows * outputBlock.channels(), BYTE, i, 4);
+                if (i != 1) { // cut top 2 rows
+                	outputBlock = outputBlock.rowRange(2, outputBlock.rows).clone();
+                }
+                if (i != numberOfProcesses - 1) { // cut bottom 2 rows
+                	outputBlock = Mat(outputBlock.rows-2, outputBlock.cols, CV_8UC3, outputBlock.data);
+                }
                 outputImage.push_back(outputBlock);
             }
             delete [] blockSize;
